@@ -1,2 +1,0 @@
-class PyLibDMTXError(Exception):
-    pass

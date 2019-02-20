@@ -49,5 +49,13 @@ function takepicture() {
 }
 
 function send_pic() {
+    let ws = new WebSocket("ws://localhost:8765");
+    ws.onopen = () => ws.send("hopsa");
+    ws.onmessage = (msg) => {
+        console.log(msg);
+        let imageUrl = URL.createObjectURL(msg.data);
+        //document.querySelector("#image").src = imageUrl;
+        document.getElementById('photo').setAttribute('src', imageUrl);
+    }
 
 }

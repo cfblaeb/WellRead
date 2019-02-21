@@ -1,4 +1,6 @@
 let video_source_selector = document.querySelector('select');
+let canvas = document.getElementById('mycanvas');
+let context = canvas.getContext('2d');
 
 document.getElementById('startbutton').addEventListener('click', function(ev){
     takepicture();
@@ -39,23 +41,24 @@ function changeVideoSource(event) {
 }
 
 function takepicture() {
-    let canvas = document.getElementById('mycanvas');
-    let context = canvas.getContext('2d');
-    canvas.width = 500;
-    canvas.height = 500;
-    context.drawImage(document.querySelector('video'), 0, 0, 500, 500);
-    let data = canvas.toDataURL('image/png');
-    document.getElementById('photo').setAttribute('src', data);
-}
-
-function send_pic() {
     let ws = new WebSocket("ws://localhost:8765");
-    ws.onopen = () => ws.send("hopsa");
+    let width = window.stream.getVideoTracks()[0].getSettings().width;
+    let height = window.stream.getVideoTracks()[0].getSettings().height;
+    canvas.width = width;
+    canvas.height = height;
+    ws.onopen = () => {
+        context.drawImage(document.querySelector('video'), 0, 0, width, height);
+        //let data = canvas.toDataURL('image/png');
+        canvas.toBlob((blob) => ws.send(blob))
+    };
     ws.onmessage = (msg) => {
+        //window.msg = msg
         console.log(msg);
         let imageUrl = URL.createObjectURL(msg.data);
         //document.querySelector("#image").src = imageUrl;
-        document.getElementById('photo').setAttribute('src', imageUrl);
+        //document.getElementById('photo').setAttribute('src', imageUrl);
+        let img = new Image();
+        img.onload = () => context.drawImage(img, 0, 0, width, height);
+        img.src = imageUrl;
     }
-
 }

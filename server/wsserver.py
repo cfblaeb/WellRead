@@ -15,6 +15,7 @@ from skimage.color import rgb2grey
 from pylibdmtx.pylibdmtx import decode
 from scipy import ndimage
 from multiprocessing import Pool
+from io import BytesIO
 
 
 def decode_thread(pospos):
@@ -41,7 +42,7 @@ def read_dem_wells(ski_image, scale=2, direction='portrait', effort=10):
 	else:
 		number_of_y_groups = 8
 		number_of_x_groups = 12
-	#ski_image = io.imread("timages/op3t/t1.jpg")  # perfect
+	ski_image = io.imread("timages/op3t/t1.jpg")  # perfect
 	grey_image = rgb2grey(ski_image)
 	rescaled = rescale(grey_image, 1 / scale, multichannel=False)
 	edges2 = feature.canny(rescaled)
@@ -82,16 +83,18 @@ def read_dem_wells(ski_image, scale=2, direction='portrait', effort=10):
 			ax.add_patch(rect)
 
 	#plt.show()
-	return rar, ax
+	return rar, fig
 
 
 async def hello(websocket, path):
 	image = await websocket.recv()
-	#with open('pics_from_client/rec.png', 'wb') as f:
-	#	f.write(image)
-	rar, ax = read_dem_wells(io.imread(image), scale=2, direction='landscape', effort=10)
-
-	await websocket.send(open("/home/laeb/PycharmProjects/WellRead/timages/op3t/t1.jpg", 'rb').read())
+	print("received image")
+	blob = BytesIO(image)
+	rar, fig = read_dem_wells(io.imread(blob), scale=2, direction='landscape', effort=10)
+	print("analyzed")
+	f = BytesIO()
+	fig.savefig(f, format='png')
+	await websocket.send(f.getvalue())
 
 get_event_loop().run_until_complete(serve(hello, 'localhost', 8765))
 get_event_loop().run_forever()

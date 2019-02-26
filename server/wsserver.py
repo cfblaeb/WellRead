@@ -16,6 +16,7 @@ from pylibdmtx.pylibdmtx import decode
 from scipy import ndimage
 from multiprocessing import Pool
 from io import BytesIO
+from json import dumps
 
 
 def decode_thread(pospos):
@@ -23,15 +24,15 @@ def decode_thread(pospos):
 
 	res = decode(well, timeout=100, shrink=2, deviation=40, threshold=20, max_count=1)
 	if res:
-		return {'row': row, 'col': col, 'barcode': res[0].data}
+		return {'row': row, 'xs': xs, 'col': col, 'ys': ys, 'barcode': res[0].data.decode()}
 	else:
 		found = False
 		for i in range(effort):
 			res = decode(ndimage.rotate(well, i, reshape=False), timeout=100, max_count=1)
 			if res:
-				return {'row': row, 'col': col, 'barcode': res[0].data}
+				return {'row': row, 'xs': xs, 'col': col, 'ys': ys, 'barcode': res[0].data.decode()}
 		if not found:
-			return {'row': row, 'col': col, 'failed': well}
+			return {'row': row, 'xs': xs, 'col': col, 'ys': ys, 'barcode': 'failed'}
 
 
 def read_dem_wells(ski_image, scale=2, direction='portrait', effort=10):
@@ -77,24 +78,31 @@ def read_dem_wells(ski_image, scale=2, direction='portrait', effort=10):
 
 	fig, ax = plt.subplots(figsize=(10, 6))
 	ax.imshow(ski_image)
-	for col, xs in enumerate(sorted(x_poss)):
-		for row, ys in enumerate(sorted(y_poss)):
-			rect = mpatches.Rectangle((xs * scale, ys * scale), s_size, s_size, fill=False, edgecolor='red', linewidth=2)
-			ax.add_patch(rect)
+	#for col, xs in enumerate(sorted(x_poss)):
+	#	for row, ys in enumerate(sorted(y_poss)):
+	for irar in rar:
+		#{'row': row, 'xs': xs, 'col': col, 'ys': ys, 'barcode': 'failed'}
+		if irar['barcode'] == 'failed':
+			color = 'red'
+		else:
+			color = 'green'
+		rect = mpatches.Rectangle((irar['xs'] * scale, irar['ys'] * scale), s_size, s_size, fill=False, edgecolor=color, linewidth=2)
+		ax.add_patch(rect)
 
-	#plt.show()
-	return rar, fig
+	f = BytesIO()
+	ax.axis('off')
+	fig.savefig(f, format='png', bbox_inches='tight')
+	return rar, f.getvalue()
 
 
 async def hello(websocket, path):
 	image = await websocket.recv()
 	print("received image")
 	blob = BytesIO(image)
-	rar, fig = read_dem_wells(io.imread(blob), scale=2, direction='landscape', effort=10)
+	rar, ready_to_send_fig = read_dem_wells(io.imread(blob), scale=2, direction='landscape', effort=10)
 	print("analyzed")
-	f = BytesIO()
-	fig.savefig(f, format='png')
-	await websocket.send(f.getvalue())
+	await websocket.send(ready_to_send_fig)
+	await websocket.send(dumps(rar))
 
 get_event_loop().run_until_complete(serve(hello, 'localhost', 8765))
 get_event_loop().run_forever()

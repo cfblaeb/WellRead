@@ -5,10 +5,15 @@
         <title>Title</title>
     </head>
     <body>
-        <label>video source</label><select></select>
-        <video autoplay></video>
-        <canvas id="mycanvas"></canvas>
+        <label for="video_source_select">video source</label>
+        <select id="video_source_select"></select>
+
+        <video id="hidden_video" autoplay style="display:none;"></video>
+
+        <canvas id="camera_canvas"></canvas>
         <button id="startbutton">Take photo</button>
+
+        <canvas id="return_canvas"></canvas>
         <script src="client.js"></script>
     </body>
 </html>

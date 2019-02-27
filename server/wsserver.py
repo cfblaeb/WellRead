@@ -24,15 +24,15 @@ def decode_thread(pospos):
 
 	res = decode(well, timeout=100, shrink=2, deviation=40, threshold=20, max_count=1)
 	if res:
-		return {'row': row, 'xs': xs, 'col': col, 'ys': ys, 'barcode': res[0].data.decode()}
+		return {'row': row+1, 'xs': xs, 'col': col+1, 'ys': ys, 'barcode': res[0].data.decode()}
 	else:
 		found = False
 		for i in range(effort):
 			res = decode(ndimage.rotate(well, i, reshape=False), timeout=100, max_count=1)
 			if res:
-				return {'row': row, 'xs': xs, 'col': col, 'ys': ys, 'barcode': res[0].data.decode()}
+				return {'row': row+1, 'xs': xs, 'col': col+1, 'ys': ys, 'barcode': res[0].data.decode()}
 		if not found:
-			return {'row': row, 'xs': xs, 'col': col, 'ys': ys, 'barcode': 'failed'}
+			return {'row': row+1, 'xs': xs, 'col': col+1, 'ys': ys, 'barcode': 'failed'}
 
 
 def read_dem_wells(ski_image, scale=2, direction='portrait', effort=10):

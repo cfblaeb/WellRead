@@ -90,7 +90,7 @@ function changeVideoSource(event) {
 }
 
 function takepicture() {
-    let ws = new WebSocket("ws://localhost:8765");
+    let ws = new WebSocket("wss://wellread.ebdrup.biosustain.dtu.dk/ws");
     ws.onopen = () => {
         camera_canvas.toBlob((blob) => ws.send(blob));
         cam_on = false;

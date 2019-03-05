@@ -100,7 +100,7 @@ async def hello(websocket, path):
 	print("received image")
 	blob = BytesIO(image)
 	image = io.imread(blob)
-	io.imsave(f"../timages/samples/{np.randint(100)}.png", image)
+	io.imsave(f"../timages/samples/{np.random.randint(100)}.png", image)
 	rar, ready_to_send_fig = read_dem_wells(image, scale=2, direction='landscape', effort=10)
 	print("analyzed")
 	await websocket.send(ready_to_send_fig)

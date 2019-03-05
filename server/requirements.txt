@@ -1,7 +1,7 @@
 scikit-image>=0.14.2
 pylibdmtx>=0.1.9
 websockets>=7.0
-sklearn>=0.20.3
+sklearn>=0.0
 numpy>=1.16.2
 pandas>=0.24.1
 matplotlib>=3.0.3

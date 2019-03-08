@@ -17,6 +17,7 @@ from scipy import ndimage
 from multiprocessing import Pool
 from io import BytesIO
 from json import dumps
+from uuid import uuid4
 
 
 def decode_thread(pospos):
@@ -43,7 +44,7 @@ def read_dem_wells(ski_image, scale=2, direction='portrait', effort=10):
 	else:
 		number_of_y_groups = 8
 		number_of_x_groups = 12
-	ski_image = io.imread("../timages/op3t/t1.jpg")  # perfect
+	ski_image = io.imread("/home/laeb/PycharmProjects/WellRead/timages/op3t/t1.jpg")  # perfect
 	grey_image = rgb2grey(ski_image)
 	rescaled = rescale(grey_image, 1 / scale, multichannel=False)
 	edges2 = feature.canny(rescaled)
@@ -100,7 +101,7 @@ async def hello(websocket, path):
 	print("received image")
 	blob = BytesIO(image)
 	image = io.imread(blob)
-	io.imsave(f"../timages/samples/{np.random.randint(100)}.png", image)
+	io.imsave(f"{uuid4()}.png", image)
 	rar, ready_to_send_fig = read_dem_wells(image, scale=2, direction='landscape', effort=10)
 	print("analyzed")
 	await websocket.send(ready_to_send_fig)

@@ -10,10 +10,10 @@
 <div class="container-fluid">
     <div class="row justify-content-md-center">
         <div class="col">
-            <div class="card shadow p-3 mb-1 bg-white rounded">
+            <div class="card shadow p-3 mb-1 bg-white rounded text-center">
                 <div class="card-body">
-                    <video id="video_id" width="640" height="480" style="display: none"></video>
-                    <canvas id="canvas_id" width="640" height="480" style="border:1px solid #ccc"></canvas>
+                    <video id="video_id" width="1920" height="1080" hidden></video>
+                    <canvas id="canvas_id" width="1920" height="1080" style="border:1px solid #ccc"></canvas>
                     <div class="form-group row">
                         <label for="video_source_select" class="col-sm-2 col-form-label">video source</label>
                         <div class="col-sm-10">
@@ -26,16 +26,17 @@
     </div>
     <div class="row justify-content-md-center">
         <div class="col">
-            <div class="card shadow p-3 mb-1 bg-white rounded">
+            <div class="card shadow p-3 mb-1 bg-white rounded text-center">
                 <div class="card-body">
-                    <button id="startbutton" class="btn btn-primary btn-block">Take photo</button>
+                    <button id="back_btn" class="btn"><</button>
+                    <button id="fwd_btn" class="btn btn-primary">Take photo ></button>
                 </div>
             </div>
         </div>
     </div>
     <div class="row justify-content-md-center">
         <div class="col">
-            <div class="card shadow p-3 mb-1 bg-white rounded">
+            <div class="card shadow p-3 mb-1 bg-white rounded text-center">
                 <button class="btn btn-default" id="copy-button" data-clipboard-target="#table_base">Copy table</button>
                 <table id="table_base" class="table table-striped table-hover">
                     <thead class="thead-dark">

@@ -43,7 +43,12 @@ clipboard.on('success', function(e) {
 // let fabric control the canvas
 let canvas = new fabric.Canvas('canvas_id', {
     selection: false,
-    selectionLineWidth: 2
+});
+canvas.on('object:selected', function(o){
+    let activeObj = o.target;
+    if (activeObj.get('type') == 'group') {
+        activeObj.set({'borderColor':'#ff0000','cornerColor':'#fbb802'});
+    }
 });
 // craete fabric webcam image
 let webcam = new fabric.Image(video_el, {
@@ -79,18 +84,31 @@ function draw_grid() {
     canvas.add(pl);
 }
 
+function render() {
+    if (program_state===0) {
+        canvas.renderAll();
+        fabric.util.requestAnimFrame(render);
+    }
+}
+
 function set_video_and_stuff(stream) {
     width = stream.getVideoTracks()[0].getSettings().width;
     height = stream.getVideoTracks()[0].getSettings().height;
-    canvas_el.width = width;
-    canvas_el.height = height;
+    //canvas_el.width = width;
+    //canvas_el.height = height;
     //video_el.width = width;
     //video_el.height = height;
+    canvas.setWidth(width);
+    canvas.setHeight(height);
+    canvas.calcOffset();
     window.stream = stream;
     video_el.srcObject=stream;
     canvas.add(webcam);
     webcam.moveTo(0);
     webcam.getElement().play();
+    fabric.util.requestAnimFrame(
+        render
+    );
 }
 
 // list cameras
@@ -119,10 +137,6 @@ function send_picture_and_wait_for_response() {
     let ws = new WebSocket("ws://localhost:8765");
     ws.onopen = () => {
         canvas_el.toBlob((blob) => ws.send(blob));
-        cam_on = false;
-        action_button.innerText = "start camera";
-        if (window.stream) {window.stream.getTracks().forEach(function(track) {track.stop();});}
-
     };
     ws.onmessage = (msg) => {
         if (typeof(msg.data)=="string") {
@@ -143,6 +157,7 @@ function send_picture_and_wait_for_response() {
             let imageUrl = URL.createObjectURL(msg.data);
             let img = new Image();
             img.onload = () => {
+                canvas.clear();
                 let faim = new fabric.Image(img);
                 canvas.add(faim);
             };
@@ -152,21 +167,8 @@ function send_picture_and_wait_for_response() {
 }
 
 //event listeners
-/*
 document.addEventListener('DOMContentLoaded',() => video_source_selector.onchange=changeVideoSource,false);
-fwd_button.addEventListener('click', (ev) => {
-    if (cam_on) {takepicture();}
-    else {
-        cam_on = true;
-        action_button.innerText = "take photo";
-        navigator.mediaDevices.getUserMedia({video:true}).then(
-            (stream)=> { set_video_and_stuff(stream); },
-            (error)=>console.log('got media error:', error)
-        );
-    }
-    ev.preventDefault();
-    }, false);
-*/
+
 function do_state_change(direction) {
     if (direction === -1) {
         if (program_state>0) {
@@ -192,8 +194,14 @@ function do_state_change(direction) {
             break;
         case 1:
             //take photo
+            let a3 = "";
+            webcam.cloneAsImage(function(cloned) {
+                a3 = cloned;
+            });
             //stop camera
             window.stream.getTracks().forEach((track) => track.stop());
+            a3.set('selectable', false);
+            canvas.add(a3);
             //draw grid
             draw_grid();
             // set button text
@@ -202,6 +210,7 @@ function do_state_change(direction) {
             break;
         case 2:
             // send data
+            send_picture_and_wait_for_response();
             // receive data
             // handle data
             // set button text
@@ -214,8 +223,3 @@ function do_state_change(direction) {
 back_button.addEventListener('click', () => do_state_change(-1));
 fwd_button.addEventListener('click', () => do_state_change(1));
 do_state_change(0);
-
-fabric.util.requestAnimFrame(function render() {
-    canvas.renderAll();
-    fabric.util.requestAnimFrame(render);
-});

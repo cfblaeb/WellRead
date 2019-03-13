@@ -12,7 +12,6 @@ let program_state = 0;
 /*
     0: Taking a picture of the plate
         camera          on
-        canvas          show live camera
         fwd button text take picture
         button action   stop camera
     1: Align well grid
@@ -26,13 +25,6 @@ let program_state = 0;
         fwd_button text restart
         button action   goto status 0
 */
-//canvas/video size
-let width = 1920;
-let height = 1080;
-//video_el.width = width;
-//video_el.height = height;
-//canvas_el.width = width;
-//canvas_el.height = height;
 
 // activate copy/paste button
 let clipboard = new ClipboardJS('.btn');
@@ -40,35 +32,16 @@ clipboard.on('success', function(e) {
     e.clearSelection();
 });
 
-// let fabric control the canvas
-let canvas = new fabric.Canvas('canvas_id', {
-    selection: false,
-});
-canvas.on('object:selected', function(o){
-    let activeObj = o.target;
-    if (activeObj.get('type') == 'group') {
-        activeObj.set({'borderColor':'#ff0000','cornerColor':'#fbb802'});
-    }
-});
-// craete fabric webcam image
-let webcam = new fabric.Image(video_el, {
-    left: 0,
-    top: 0,
-    objectCaching: false,
-    selectable: false
-});
-
-//grid
 function draw_grid() {
     // plate dimensions
     let no_rows = 8;
     let no_columns = 12;
-    if (width>height) {
-        square_size = width/12;
+    if (canvas_el.width>canvas_el.height) {
+        square_size = canvas_el.width/12;
         no_rows = 8;
         no_columns = 12;
     } else {
-        square_size = height/12;
+        square_size = canvas_el.height/12;
         no_rows = 12;
         no_columns = 8;
     }
@@ -84,33 +57,6 @@ function draw_grid() {
     canvas.add(pl);
 }
 
-function render() {
-    if (program_state===0) {
-        canvas.renderAll();
-        fabric.util.requestAnimFrame(render);
-    }
-}
-
-function set_video_and_stuff(stream) {
-    width = stream.getVideoTracks()[0].getSettings().width;
-    height = stream.getVideoTracks()[0].getSettings().height;
-    //canvas_el.width = width;
-    //canvas_el.height = height;
-    //video_el.width = width;
-    //video_el.height = height;
-    canvas.setWidth(width);
-    canvas.setHeight(height);
-    canvas.calcOffset();
-    window.stream = stream;
-    video_el.srcObject=stream;
-    canvas.add(webcam);
-    webcam.moveTo(0);
-    webcam.getElement().play();
-    fabric.util.requestAnimFrame(
-        render
-    );
-}
-
 // list cameras
 navigator.mediaDevices.enumerateDevices().then(
     (devices) => {
@@ -118,17 +64,34 @@ navigator.mediaDevices.enumerateDevices().then(
             if (device.kind === 'videoinput') {
                 let device_option = document.createElement("option");
                 device_option.value = device.deviceId;
-                device_option.text = device.deviceId;
+                device_option.text = device.label;
                 video_source_selector.add(device_option)
 }});});
+
+function start_camera(device_id = "") {
+    if (device_id !== "") { // if a device has been selected, force it through
+        device_id = {exact: device_id}
+    }
+    navigator.mediaDevices.getUserMedia({
+        video: {
+            deviceId: device_id,
+            facingMode: "environment",
+            width: 4000
+        }}).then(
+            (stream)=> {
+                video_el.width = stream.getTracks()[0].getSettings().width;
+                video_el.height = stream.getTracks()[0].getSettings().height;
+                video_el.srcObject=stream;
+            },
+        (error)=>console.log('got media error:', error)
+    );
+}
 
 // change camera
 function changeVideoSource(event) {
     if (program_state === 0) {
         if (window.stream) {window.stream.getTracks().forEach(function(track) {track.stop();});}
-        navigator.mediaDevices.getUserMedia({video:{deviceId: {exact: event.target.value}}}).then(
-            (stream)=> {set_video_and_stuff(stream);},(error)=>console.log('got media error:', error)
-        );
+        start_camera(event.target.value);
     }
 }
 
@@ -183,25 +146,38 @@ function do_state_change(direction) {
     }
     switch (program_state) {
         case 0:
+            if (window.canvas) {
+                canvas.dispose();
+            }
             // activate camera
-            navigator.mediaDevices.getUserMedia({video:true}).then(
-                (stream)=> { set_video_and_stuff(stream); },
-                (error)=>console.log('got media error:', error)
-            );
+            canvas_el.hidden = true;
+            video_el.hidden = false;
+            start_camera();
             // set button text
             back_button.innerText = "< (1/3)";
             fwd_button.innerText = "Take photo (2/3)>";
             break;
         case 1:
-            //take photo
-            let a3 = "";
-            webcam.cloneAsImage(function(cloned) {
-                a3 = cloned;
+            video_el.hidden = true;
+            canvas_el.hidden = false;
+            // size the canvas to video size
+            canvas_el.width = video_el.videoWidth;
+            canvas_el.height = video_el.videoHeight;
+            // let fabric control the canvas
+            window.canvas = new fabric.Canvas('canvas_id', {selection: false,});
+            canvas.on('object:selected', function(o){
+                let activeObj = o.target;
+                if (activeObj.get('type') == 'group') {
+                    activeObj.set({'borderColor':'#ff0000','cornerColor':'#fbb802'});
+                }
             });
-            //stop camera
-            window.stream.getTracks().forEach((track) => track.stop());
+            let webcam = new fabric.Image(video_el);
+            let a3 = "";
+            webcam.cloneAsImage((cloned) => a3 = cloned);
             a3.set('selectable', false);
             canvas.add(a3);
+            //stop camera
+            video_el.srcObject.getTracks().forEach((track) => track.stop());
             //draw grid
             draw_grid();
             // set button text

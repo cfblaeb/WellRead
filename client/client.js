@@ -37,10 +37,6 @@ function draw_grid() {
     let no_rows = 8;
     let no_columns = 12;
     console.log("drawing grid");
-    console.log(canvas_el.width);
-    console.log(canvas.width);
-    console.log(canvas_el.height);
-    console.log(canvas.height);
     let square_size = 0;
 
     if (canvas.width>canvas.height) {

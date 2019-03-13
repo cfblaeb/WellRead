@@ -76,7 +76,7 @@ function start_camera(device_id = "") {
         video: {
             deviceId: device_id,
             facingMode: "environment",
-            width: 4000
+            //width: 4000
         }}).then(
             (stream)=> {
                 video_el.width = stream.getTracks()[0].getSettings().width;

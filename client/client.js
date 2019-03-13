@@ -169,12 +169,12 @@ function do_state_change(direction) {
                 }
             });
             let webcam = new fabric.Image(video_el, {selectable: false});
-            //let a3 = "";
-            //webcam.cloneAsImage((cloned) => a3 = cloned);
-            //a3.set('selectable', false);
-            canvas.add(webcam);
+            let a3 = "";
+            webcam.cloneAsImage((cloned) => a3 = cloned);
+            a3.set('selectable', false);
+            canvas.add(a3);
             //stop camera
-            //video_el.srcObject.getTracks().forEach((track) => track.stop());
+            video_el.srcObject.getTracks().forEach((track) => track.stop());
             //draw grid
             draw_grid();
             // set button text

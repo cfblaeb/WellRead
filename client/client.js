@@ -41,14 +41,14 @@ function draw_grid() {
     console.log(canvas.width);
     console.log(canvas_el.height);
     console.log(canvas.height);
+    let square_size = 0;
 
-
-    if (canvas_el.width>canvas_el.height) {
-        square_size = canvas_el.width/12;
+    if (canvas.width>canvas.height) {
+        square_size = canvas.width/12;
         no_rows = 8;
         no_columns = 12;
     } else {
-        square_size = canvas_el.height/12;
+        square_size = canvas.height/12;
         no_rows = 12;
         no_columns = 8;
     }

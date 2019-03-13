@@ -133,8 +133,8 @@ function changeVideoSource(event) {
 }
 
 function send_picture_and_wait_for_response() {
-    //let ws = new WebSocket("wss://wellread.ebdrup.biosustain.dtu.dk/ws");
-    let ws = new WebSocket("ws://localhost:8765");
+    let ws = new WebSocket("wss://wellread.ebdrup.biosustain.dtu.dk/ws");
+    //let ws = new WebSocket("ws://localhost:8765");
     ws.onopen = () => {
         canvas_el.toBlob((blob) => ws.send(blob));
     };

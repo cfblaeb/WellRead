@@ -76,7 +76,7 @@ function start_camera(device_id = "") {
     navigator.mediaDevices.getUserMedia({
         video: {
             deviceId: device_id,
-            //width: 4000
+            width: 4000
         }}).then(
             (stream)=> {
                 console.log("Starting camera");

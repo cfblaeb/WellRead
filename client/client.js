@@ -36,6 +36,13 @@ function draw_grid() {
     // plate dimensions
     let no_rows = 8;
     let no_columns = 12;
+    console.log("drawing grid");
+    console.log(canvas_el.width);
+    console.log(canvas.width);
+    console.log(canvas_el.height);
+    console.log(canvas.height);
+
+
     if (canvas_el.width>canvas_el.height) {
         square_size = canvas_el.width/12;
         no_rows = 8;
@@ -76,6 +83,11 @@ function start_camera(device_id = "") {
             //width: 4000
         }}).then(
             (stream)=> {
+                console.log("Starting camera");
+                console.log(stream.getTracks()[0].getSettings());
+                window.vtrack = stream.getTracks()[0];
+
+                video_source_selector.value = stream.getTracks()[0].getSettings().deviceId;
                 video_el.width = stream.getTracks()[0].getSettings().width;
                 video_el.height = stream.getTracks()[0].getSettings().height;
                 video_el.srcObject=stream;
@@ -141,6 +153,8 @@ function do_state_change(direction) {
             program_state = 0; // reset
         }
     }
+    console.log("state switch");
+    console.log(program_state);
     switch (program_state) {
         case 0:
             if (window.canvas) {
@@ -158,6 +172,9 @@ function do_state_change(direction) {
             video_el.hidden = true;
             canvas_el.hidden = false;
             // size the canvas to video size
+            console.log("setting canvas to");
+            console.log(video_el.videoWidth);
+            console.log(video_el.videoHeight);
             canvas_el.width = video_el.videoWidth;
             canvas_el.height = video_el.videoHeight;
             // let fabric control the canvas
@@ -173,6 +190,8 @@ function do_state_change(direction) {
             webcam.cloneAsImage((cloned) => a3 = cloned);
             a3.set('selectable', false);
             canvas.add(a3);
+            window.webcam = webcam;
+            window.a3 = a3;
             //stop camera
             video_el.srcObject.getTracks().forEach((track) => track.stop());
             //draw grid

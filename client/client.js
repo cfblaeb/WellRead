@@ -64,18 +64,15 @@ navigator.mediaDevices.enumerateDevices().then(
             if (device.kind === 'videoinput') {
                 let device_option = document.createElement("option");
                 device_option.value = device.deviceId;
-                device_option.text = device.label;
+                if (device.label) device_option.text = device.label;
+                else device_option.text = device.deviceId;
                 video_source_selector.add(device_option)
 }});});
 
 function start_camera(device_id = "") {
-    if (device_id !== "") { // if a device has been selected, force it through
-        device_id = {exact: device_id}
-    }
     navigator.mediaDevices.getUserMedia({
         video: {
             deviceId: device_id,
-            facingMode: "environment",
             //width: 4000
         }}).then(
             (stream)=> {
@@ -171,13 +168,13 @@ function do_state_change(direction) {
                     activeObj.set({'borderColor':'#ff0000','cornerColor':'#fbb802'});
                 }
             });
-            let webcam = new fabric.Image(video_el);
-            let a3 = "";
-            webcam.cloneAsImage((cloned) => a3 = cloned);
-            a3.set('selectable', false);
-            canvas.add(a3);
+            let webcam = new fabric.Image(video_el, {selectable: false});
+            //let a3 = "";
+            //webcam.cloneAsImage((cloned) => a3 = cloned);
+            //a3.set('selectable', false);
+            canvas.add(webcam);
             //stop camera
-            video_el.srcObject.getTracks().forEach((track) => track.stop());
+            //video_el.srcObject.getTracks().forEach((track) => track.stop());
             //draw grid
             draw_grid();
             // set button text

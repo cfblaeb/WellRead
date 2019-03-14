@@ -86,13 +86,11 @@ function start_camera() {
         }).then(
             (stream)=> {
                 console.log("Starting camera");
-                console.log(stream.getTracks()[0].getSettings());
-                //window.vtrack = stream.getTracks()[0];
-
-                video_source_selector.value = stream.getTracks()[0].getSettings().deviceId;
-                video_el.width = stream.getTracks()[0].getSettings().width;
-                video_el.height = stream.getTracks()[0].getSettings().height;
+                //video_el.width = stream.getTracks()[0].getSettings().width;
+                //video_el.height = stream.getTracks()[0].getSettings().height;
                 video_el.srcObject=stream;
+                console.log(stream.getTracks()[0].getSettings());
+                console.log("width: " + video_el.videoWidth + " height: " + video_el.videoHeight);
                 },
             (error)=>console.log('got media error:', error)
         );

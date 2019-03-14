@@ -65,12 +65,11 @@ function draw_grid() {
 // list cameras
 navigator.mediaDevices.enumerateDevices().then(
     (devices) => {
-        devices.forEach((device) => {
+        devices.forEach((device, i) => {
             if (device.kind === 'videoinput') {
                 let device_option = document.createElement("option");
                 device_option.value = device.deviceId;
-                if (device.label) device_option.text = device.label;
-                else device_option.text = device.deviceId;
+                device_option.text = device.label || "camera " + i;
                 video_source_selector.add(device_option)
 }});});
 
@@ -81,9 +80,9 @@ function start_camera() {
         navigator.mediaDevices.getUserMedia({
         video: {
             width: 1920,
-            height: 1080
+            height: 1080,
+            deviceId: {exact: video_source_selector.value}
         },
-        deviceId: {exact: video_source_selector.value}
         }).then(
             (stream)=> {
                 console.log("Starting camera");

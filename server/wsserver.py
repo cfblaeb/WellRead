@@ -99,13 +99,18 @@ def read_dem_wells(ski_image, scale=2, direction='portrait', effort=10):
 async def hello(websocket, path):
 	image = await websocket.recv()
 	print("received image")
-	blob = BytesIO(image)
-	image = io.imread(blob)
-	io.imsave(f"{uuid4()}.png", image)
+	meta_data = await websocket.recv()
+	print("meta data recieved")
+	unique_name = str(uuid4())
+	with open(unique_name + ".json", 'w') as f:
+		f.write(meta_data)
+	image = io.imread(BytesIO(image))
+
+	io.imsave(f"{unique_name}.png", image)
 	rar, ready_to_send_fig = read_dem_wells(image, scale=2, direction='landscape', effort=10)
-	print("analyzed")
+	print("analyzed. Returning results.")
 	await websocket.send(ready_to_send_fig)
 	await websocket.send(dumps(rar))
 
-get_event_loop().run_until_complete(serve(hello, '127.0.0.1', 8765))
+get_event_loop().run_until_complete(serve(hello, '127.0.0.1', 8765, max_size=10E6))
 get_event_loop().run_forever()

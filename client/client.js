@@ -89,6 +89,9 @@ function start_camera() {
                     // size the canvas
                     window.browser_width = document.documentElement.clientWidth - 150; // extra to get some space
                     let webcam_width = video_el.videoWidth;
+                    if (window.browser_width>webcam_width) {
+                        window.browser_width = webcam_width;
+                    }
                     let scale = webcam_width/window.browser_width;
 
                     canvas_el.width = window.browser_width;
@@ -117,12 +120,13 @@ function start_camera() {
 }
 
 function send_picture_and_wait_for_response(image) {
-    let ws = new WebSocket("wss://wellread.ebdrup.biosustain.dtu.dk/ws");
-    //let ws = new WebSocket("ws://localhost:8765");
+    //let ws = new WebSocket("wss://wellread.ebdrup.biosustain.dtu.dk/ws");
+    let ws = new WebSocket("ws://localhost:8765");
     ws.onopen = () => {
+        //send image
         ws.send(window.full_res_blob);
         //send grid info
-        ws.send(JSON.stringify(window.pl));
+        ws.send(JSON.stringify({'grid': window.pl, 'scale': window.browser_width}));
     };
     ws.onmessage = (msg) => {
         if (typeof(msg.data)=="string") {
@@ -144,11 +148,11 @@ function send_picture_and_wait_for_response(image) {
             let img = new Image();
             img.onload = () => {
                 window.canvas.clear();
-                fabric.Image(img, (e) => {
-                    e.scaleToWidth(window.browser_width);
-                    window.canvas.add(e)
-                });
+                let timp = new fabric.Image(img);
+                timp.scaleToWidth(window.browser_width);
+                window.canvas.add(timp);
             };
+
             img.src = imageUrl;
         }
     }

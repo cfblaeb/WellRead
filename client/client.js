@@ -26,6 +26,8 @@ let program_state = 0;
         button action   goto status 0
 */
 
+document.addEventListener('DOMContentLoaded',() => video_source_selector.onchange=start_camera,false);
+
 // activate copy/paste button
 let clipboard = new ClipboardJS('.btn');
 clipboard.on('success', function(e) {
@@ -72,32 +74,26 @@ navigator.mediaDevices.enumerateDevices().then(
                 video_source_selector.add(device_option)
 }});});
 
-function start_camera(device_id = "") {
+function start_camera() {
     navigator.mediaDevices.getUserMedia({
         video: {
-            deviceId: device_id,
-            width: 4000
-        }}).then(
-            (stream)=> {
-                console.log("Starting camera");
-                console.log(stream.getTracks()[0].getSettings());
-                window.vtrack = stream.getTracks()[0];
+            width: 1920,
+            height: 1080
+        },
+        deviceId: {exact: video_source_selector.value}
+    }).then(
+        (stream)=> {
+            console.log("Starting camera");
+            console.log(stream.getTracks()[0].getSettings());
+            //window.vtrack = stream.getTracks()[0];
 
-                video_source_selector.value = stream.getTracks()[0].getSettings().deviceId;
-                video_el.width = stream.getTracks()[0].getSettings().width;
-                video_el.height = stream.getTracks()[0].getSettings().height;
-                video_el.srcObject=stream;
+            video_source_selector.value = stream.getTracks()[0].getSettings().deviceId;
+            video_el.width = stream.getTracks()[0].getSettings().width;
+            video_el.height = stream.getTracks()[0].getSettings().height;
+            video_el.srcObject=stream;
             },
         (error)=>console.log('got media error:', error)
     );
-}
-
-// change camera
-function changeVideoSource(event) {
-    if (program_state === 0) {
-        if (window.stream) {window.stream.getTracks().forEach(function(track) {track.stop();});}
-        start_camera(event.target.value);
-    }
 }
 
 function send_picture_and_wait_for_response() {
@@ -133,9 +129,6 @@ function send_picture_and_wait_for_response() {
         }
     }
 }
-
-//event listeners
-document.addEventListener('DOMContentLoaded',() => video_source_selector.onchange=changeVideoSource,false);
 
 function do_state_change(direction) {
     if (direction === -1) {

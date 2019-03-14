@@ -38,7 +38,6 @@ function draw_grid() {
     // plate dimensions
     let no_rows = 8;
     let no_columns = 12;
-    console.log("drawing grid");
     let square_size = 0;
 
     if (canvas.width>canvas.height) {
@@ -75,7 +74,6 @@ navigator.mediaDevices.enumerateDevices().then(
 
 function start_camera() {
     if (program_state===0) {
-        console.log("asking for cam: " + video_source_selector.value);
         if (video_el.srcObject) {video_el.srcObject.getTracks().forEach(function(track) {track.stop();});}
         navigator.mediaDevices.getUserMedia({
         video: {
@@ -85,12 +83,14 @@ function start_camera() {
         },
         }).then(
             (stream)=> {
-                console.log("Starting camera");
-                //video_el.width = stream.getTracks()[0].getSettings().width;
-                //video_el.height = stream.getTracks()[0].getSettings().height;
                 video_el.onplay = () => {
-                    console.log(stream.getTracks()[0].getSettings());
+                    console.log("track: width: " + stream.getTracks()[0].getSettings().width);
+                    console.log("track: height: " + stream.getTracks()[0].getSettings().height);
                     console.log("width: " + video_el.videoWidth + " height: " + video_el.videoHeight);
+                    //video_el.width = stream.getTracks()[0].getSettings().width;
+                    //video_el.height = stream.getTracks()[0].getSettings().height;
+                    video_el.width = video_el.videoWidth;
+                    video_el.height = video_el.videoHeight;
                 };
 
                 video_el.srcObject=stream;

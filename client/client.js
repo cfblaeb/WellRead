@@ -76,6 +76,7 @@ navigator.mediaDevices.enumerateDevices().then(
 
 function start_camera() {
     if (program_state===0) {
+        console.log("asking for cam: " + video_source_selector.value);
         if (video_el.srcObject) {video_el.srcObject.getTracks().forEach(function(track) {track.stop();});}
         navigator.mediaDevices.getUserMedia({
         video: {

@@ -75,25 +75,28 @@ navigator.mediaDevices.enumerateDevices().then(
 }});});
 
 function start_camera() {
-    navigator.mediaDevices.getUserMedia({
+    if (program_state===0) {
+        if (video_el.srcObject) {video_el.srcObject.getTracks().forEach(function(track) {track.stop();});}
+        navigator.mediaDevices.getUserMedia({
         video: {
             width: 1920,
             height: 1080
         },
         deviceId: {exact: video_source_selector.value}
-    }).then(
-        (stream)=> {
-            console.log("Starting camera");
-            console.log(stream.getTracks()[0].getSettings());
-            //window.vtrack = stream.getTracks()[0];
+        }).then(
+            (stream)=> {
+                console.log("Starting camera");
+                console.log(stream.getTracks()[0].getSettings());
+                //window.vtrack = stream.getTracks()[0];
 
-            video_source_selector.value = stream.getTracks()[0].getSettings().deviceId;
-            video_el.width = stream.getTracks()[0].getSettings().width;
-            video_el.height = stream.getTracks()[0].getSettings().height;
-            video_el.srcObject=stream;
-            },
-        (error)=>console.log('got media error:', error)
-    );
+                video_source_selector.value = stream.getTracks()[0].getSettings().deviceId;
+                video_el.width = stream.getTracks()[0].getSettings().width;
+                video_el.height = stream.getTracks()[0].getSettings().height;
+                video_el.srcObject=stream;
+                },
+            (error)=>console.log('got media error:', error)
+        );
+    }
 }
 
 function send_picture_and_wait_for_response() {

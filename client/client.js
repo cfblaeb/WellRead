@@ -2,16 +2,15 @@
 let video_el = document.getElementById('video_id');
 let canvas_el = document.getElementById('canvas_id');
 let video_source_selector = document.getElementById('video_source_select');
-
 let back_button = document.getElementById('back_btn');
 let fwd_button = document.getElementById('fwd_btn');
-
 let result_table = document.getElementById('result_table');
 
 let program_state = 0;
 /*
     0: Taking a picture of the plate
-        camera          on
+        camera          on, hidden
+        canvas          show camera
         fwd button text take picture
         button action   stop camera
     1: Align well grid
@@ -34,7 +33,7 @@ clipboard.on('success', function(e) {
     e.clearSelection();
 });
 
-function draw_grid() {
+function draw_grid () {
     // plate dimensions
     let no_rows = 8;
     let no_columns = 12;
@@ -57,20 +56,17 @@ function draw_grid() {
     for (let column = 1; column<no_columns; column++ ) {
         lines.push(new fabric.Line([ column*square_size, 0, column*square_size, no_rows*square_size], {stroke: '#FF0000'}))
     }
-    let pl = new fabric.Group(lines);
-    canvas.add(pl);
+    window.pl = new fabric.Group(lines);
+    window.canvas.add(window.pl);
 }
 
-// list cameras
-navigator.mediaDevices.enumerateDevices().then(
-    (devices) => {
-        devices.forEach((device, i) => {
-            if (device.kind === 'videoinput') {
-                let device_option = document.createElement("option");
-                device_option.value = device.deviceId;
-                device_option.text = device.label || "camera " + i;
-                video_source_selector.add(device_option)
-}});});
+// function to update the canvas
+function render() {
+    if (program_state===0) {
+        canvas.renderAll();
+        fabric.util.requestAnimFrame(render);
+    }
+}
 
 function start_camera() {
     if (program_state===0) {
@@ -84,13 +80,34 @@ function start_camera() {
         }).then(
             (stream)=> {
                 video_el.onplay = () => {
-                    console.log("track: width: " + stream.getTracks()[0].getSettings().width);
-                    console.log("track: height: " + stream.getTracks()[0].getSettings().height);
-                    console.log("width: " + video_el.videoWidth + " height: " + video_el.videoHeight);
-                    //video_el.width = stream.getTracks()[0].getSettings().width;
-                    //video_el.height = stream.getTracks()[0].getSettings().height;
+                    // add widht+height tag to video el. Needed for fabricjs
                     video_el.width = video_el.videoWidth;
                     video_el.height = video_el.videoHeight;
+                    // if a canvas object already exist, delete it
+                    if (window.canvas) {
+                        window.canvas.dispose();
+                    }
+                    // size the canvas
+                    window.browser_width = document.documentElement.clientWidth - 120;
+                    let webcam_width = video_el.videoWidth;
+                    let scale = webcam_width/window.browser_width;
+
+                    canvas_el.width = window.browser_width;
+                    canvas_el.height = video_el.videoHeight/scale;
+                    // let fabric control the canvas
+                    window.canvas = new fabric.Canvas('canvas_id', {selection: false,});
+                    window.canvas.on('object:selected', function(o){
+                        let activeObj = o.target;
+                        if (activeObj.get('type') === 'group') {
+                            activeObj.set({'borderColor':'#ff0000','cornerColor':'#fbb802'});
+                        }
+                    });
+                    window.webcam = new fabric.Image(video_el, {selectable: false});
+                    window.webcam.scaleToWidth(window.browser_width);
+                    window.canvas.add(window.webcam);
+                    fabric.util.requestAnimFrame(
+                        render
+                    );
                 };
 
                 video_el.srcObject=stream;
@@ -100,11 +117,13 @@ function start_camera() {
     }
 }
 
-function send_picture_and_wait_for_response() {
+function send_picture_and_wait_for_response(image) {
     let ws = new WebSocket("wss://wellread.ebdrup.biosustain.dtu.dk/ws");
     //let ws = new WebSocket("ws://localhost:8765");
     ws.onopen = () => {
-        canvas_el.toBlob((blob) => ws.send(blob));
+        ws.send(window.full_res_blob);
+        //send grid info
+        ws.send(JSON.stringify(window.pl));
     };
     ws.onmessage = (msg) => {
         if (typeof(msg.data)=="string") {
@@ -125,9 +144,11 @@ function send_picture_and_wait_for_response() {
             let imageUrl = URL.createObjectURL(msg.data);
             let img = new Image();
             img.onload = () => {
-                canvas.clear();
-                let faim = new fabric.Image(img);
-                canvas.add(faim);
+                window.canvas.clear();
+                fabric.Image(img, (e) => {
+                    e.scaleToWidth(window.browser_width);
+                    window.canvas.add(e)
+                });
             };
             img.src = imageUrl;
         }
@@ -146,52 +167,36 @@ function do_state_change(direction) {
             program_state = 0; // reset
         }
     }
-    console.log("state switch");
-    console.log(program_state);
     switch (program_state) {
         case 0:
-            if (window.canvas) {
-                canvas.dispose();
-            }
-            // activate camera
-            canvas_el.hidden = true;
-            video_el.hidden = false;
-            start_camera();
+            start_camera(); // activate camera
             // set button text
-            back_button.innerText = "< (1/3)";
-            fwd_button.innerText = "Take photo (2/3)>";
+            back_button.innerText = "<";
+            back_button.disabled = true;
+            fwd_button.innerText = "Take photo >";
             break;
         case 1:
-            video_el.hidden = true;
-            canvas_el.hidden = false;
-            // size the canvas to video size
-            console.log("setting canvas to");
-            console.log(video_el.videoWidth);
-            console.log(video_el.videoHeight);
-            canvas_el.width = video_el.videoWidth;
-            canvas_el.height = video_el.videoHeight;
-            // let fabric control the canvas
-            window.canvas = new fabric.Canvas('canvas_id', {selection: false,});
-            canvas.on('object:selected', function(o){
-                let activeObj = o.target;
-                if (activeObj.get('type') == 'group') {
-                    activeObj.set({'borderColor':'#ff0000','cornerColor':'#fbb802'});
-                }
+            //remove webcam element
+            window.canvas.remove(window.webcam);
+            //create full res canvas copy of video
+            let fullres_canvas = document.createElement('canvas');
+            fullres_canvas.width = video_el.videoWidth;
+            fullres_canvas.height = video_el.videoHeight;
+            fullres_canvas.getContext('2d').drawImage(video_el, 0, 0);
+            fullres_canvas.toBlob((blob) => window.full_res_blob = blob); // store a full_res blob for server
+            fabric.Image.fromURL(fullres_canvas.toDataURL(), (e) => {
+                e.set('selectable', false);
+                e.scaleToWidth(window.browser_width);
+                window.canvas.add(e);
+                draw_grid();
             });
-            let webcam = new fabric.Image(video_el, {selectable: false});
-            let a3 = "";
-            webcam.cloneAsImage((cloned) => a3 = cloned);
-            a3.set('selectable', false);
-            canvas.add(a3);
-            window.webcam = webcam;
-            window.a3 = a3;
             //stop camera
             video_el.srcObject.getTracks().forEach((track) => track.stop());
-            //draw grid
-            draw_grid();
+
             // set button text
-            back_button.innerText = "< (1/3) Take another photo";
-            fwd_button.innerText = "Analyze barcodes (3/3) >";
+            back_button.disabled = false;
+            back_button.innerText = "< Retake photo";
+            fwd_button.innerText = "Analyze barcodes >";
             break;
         case 2:
             // send data
@@ -199,12 +204,26 @@ function do_state_change(direction) {
             // receive data
             // handle data
             // set button text
-            back_button.innerText = "< (2/3) Change grid";
-            fwd_button.innerText = "Back to start (1/3) >";
+            back_button.innerText = "< Change grid";
+            fwd_button.innerText = "Restart >";
             break;
     }
 }
 
 back_button.addEventListener('click', () => do_state_change(-1));
 fwd_button.addEventListener('click', () => do_state_change(1));
-do_state_change(0);
+
+// list cameras
+navigator.mediaDevices.enumerateDevices().then(
+    (devices) => {
+        devices.forEach((device, i) => {
+            if (device.kind === 'videoinput') {
+                let device_option = document.createElement("option");
+                device_option.value = device.deviceId;
+                device_option.text = device.label || "camera " + i;
+                video_source_selector.add(device_option)
+            }
+        });
+        do_state_change(0); // start the whole thing
+        video_source_selector.onchange=start_camera;
+    });

@@ -1,6 +1,7 @@
 // dom element shortcuts
 let video_el = document.getElementById('video_id');
 let canvas_el = document.getElementById('canvas_id');
+let fullres_canvas = document.getElementById("fullres_canvas_id");
 let video_source_selector = document.getElementById('video_source_select');
 let back_button = document.getElementById('back_btn');
 let fwd_button = document.getElementById('fwd_btn');
@@ -45,14 +46,14 @@ function draw_grid () {
         no_rows = 12;
         no_columns = 8;
     }
-    let square_size = Math.min(canvas.height/no_rows, canvas.width/no_columns);
+    let square_size = Math.min(canvas.height/no_rows, canvas.width/no_columns)*0.8;
 
     let lines = [];
     for (let row = 1; row<no_rows; row++ ) {
-        lines.push(new fabric.Line([ 0, row*square_size, no_columns*square_size, row*square_size], {stroke: '#FF0000'}))
+        lines.push(new fabric.Line([ square_size, row*square_size+square_size, no_columns*square_size+square_size, row*square_size+square_size], {stroke: '#FF0000'}))
     }
     for (let column = 1; column<no_columns; column++ ) {
-        lines.push(new fabric.Line([ column*square_size, 0, column*square_size, no_rows*square_size], {stroke: '#FF0000'}))
+        lines.push(new fabric.Line([ column*square_size+square_size, square_size, column*square_size+square_size, no_rows*square_size+square_size], {stroke: '#FF0000'}))
     }
     window.pl = new fabric.Group(lines);
     window.canvas.add(window.pl);
@@ -180,9 +181,8 @@ function do_state_change(direction) {
             break;
         case 1:
             window.canvas.clear();
+            //create full res canvas copy of video
             if (direction === 1) { // if we came from state 0 then save a new full res video screenshot
-                //create full res canvas copy of video
-                let fullres_canvas = document.createElement('canvas');
                 fullres_canvas.width = video_el.videoWidth;
                 fullres_canvas.height = video_el.videoHeight;
                 fullres_canvas.getContext('2d').drawImage(video_el, 0, 0);

@@ -35,19 +35,17 @@ clipboard.on('success', function(e) {
 
 function draw_grid () {
     // plate dimensions
-    let no_rows = 8;
-    let no_columns = 12;
-    let square_size = 0;
+    let no_rows = 0;
+    let no_columns = 0;
 
-    if (canvas.width>canvas.height) {
-        square_size = canvas.width/12;
+    if (canvas.width>canvas.height) { // landscape
         no_rows = 8;
         no_columns = 12;
-    } else {
-        square_size = canvas.height/12;
+    } else { // portrait
         no_rows = 12;
         no_columns = 8;
     }
+    let square_size = Math.min(canvas.height/no_rows, canvas.width/no_columns);
 
     let lines = [];
     for (let row = 1; row<no_rows; row++ ) {
@@ -88,7 +86,7 @@ function start_camera() {
                         window.canvas.dispose();
                     }
                     // size the canvas
-                    window.browser_width = document.documentElement.clientWidth - 120;
+                    window.browser_width = document.documentElement.clientWidth - 150; // extra to get some space
                     let webcam_width = video_el.videoWidth;
                     let scale = webcam_width/window.browser_width;
 
@@ -169,31 +167,38 @@ function do_state_change(direction) {
     }
     switch (program_state) {
         case 0:
+            if (direction !== 0) { // we came from either 1 or 2
+                window.canvas.clear();
+            }
+
             start_camera(); // activate camera
             // set button text
+            video_source_selector.disabled = false;
             back_button.innerText = "<";
             back_button.disabled = true;
             fwd_button.innerText = "Take photo >";
             break;
         case 1:
-            //remove webcam element
-            window.canvas.remove(window.webcam);
-            //create full res canvas copy of video
-            let fullres_canvas = document.createElement('canvas');
-            fullres_canvas.width = video_el.videoWidth;
-            fullres_canvas.height = video_el.videoHeight;
-            fullres_canvas.getContext('2d').drawImage(video_el, 0, 0);
-            fullres_canvas.toBlob((blob) => window.full_res_blob = blob); // store a full_res blob for server
+            window.canvas.clear();
+            if (direction === 1) { // if we came from state 0 then save a new full res video screenshot
+                //create full res canvas copy of video
+                let fullres_canvas = document.createElement('canvas');
+                fullres_canvas.width = video_el.videoWidth;
+                fullres_canvas.height = video_el.videoHeight;
+                fullres_canvas.getContext('2d').drawImage(video_el, 0, 0);
+                fullres_canvas.toBlob((blob) => window.full_res_blob = blob); // store a full_res blob for server
+                //stop camera
+                video_el.srcObject.getTracks().forEach((track) => track.stop());
+            }
             fabric.Image.fromURL(fullres_canvas.toDataURL(), (e) => {
                 e.set('selectable', false);
                 e.scaleToWidth(window.browser_width);
                 window.canvas.add(e);
                 draw_grid();
             });
-            //stop camera
-            video_el.srcObject.getTracks().forEach((track) => track.stop());
 
             // set button text
+            video_source_selector.disabled = true;
             back_button.disabled = false;
             back_button.innerText = "< Retake photo";
             fwd_button.innerText = "Analyze barcodes >";

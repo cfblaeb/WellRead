@@ -1,94 +1,82 @@
 from asyncio import get_event_loop
 from websockets import serve
-from sklearn.cluster import KMeans
-import numpy as np
-import pandas as pd
-import matplotlib.pyplot as plt
-import matplotlib.patches as mpatches
-from skimage.filters import threshold_otsu
-from skimage.segmentation import clear_border
-from skimage.measure import label, regionprops
-from skimage.morphology import closing, square
-from skimage import io, feature
-from skimage.transform import rescale
-from skimage.color import rgb2grey
+from matplotlib import pyplot as plt
+from matplotlib import patches
+from skimage import io, transform
 from pylibdmtx.pylibdmtx import decode
-from scipy import ndimage
 from multiprocessing import Pool
 from io import BytesIO
-from json import dumps
+from json import dumps, loads
 from uuid import uuid4
+from math import cos, sin, pi
 
 
 def decode_thread(pospos):
 	col, xs, row, ys, well, effort = pospos
 
-	res = decode(well, timeout=100, shrink=2, deviation=40, threshold=20, max_count=1)
+	res = decode(well, max_count=1)
 	if res:
 		return {'row': row+1, 'xs': xs, 'col': col+1, 'ys': ys, 'barcode': res[0].data.decode()}
 	else:
 		found = False
 		for i in range(effort):
-			res = decode(ndimage.rotate(well, i, reshape=False), timeout=100, max_count=1)
+			res = decode(transform.rotate(well, i), max_count=1)
 			if res:
 				return {'row': row+1, 'xs': xs, 'col': col+1, 'ys': ys, 'barcode': res[0].data.decode()}
 		if not found:
 			return {'row': row+1, 'xs': xs, 'col': col+1, 'ys': ys, 'barcode': 'failed'}
 
 
-def read_dem_wells(ski_image, scale=2, direction='portrait', effort=10):
-	# direction = 'portrait'  # 'landscape'/'portrait'
-	if direction == 'portrait':
-		number_of_y_groups = 12
-		number_of_x_groups = 8
-	else:
-		number_of_y_groups = 8
-		number_of_x_groups = 12
-	ski_image = io.imread("/home/laeb/PycharmProjects/WellRead/timages/op3t/t1.jpg")  # perfect
-	grey_image = rgb2grey(ski_image)
-	rescaled = rescale(grey_image, 1 / scale, multichannel=False)
-	edges2 = feature.canny(rescaled)
-	thresh = threshold_otsu(edges2)
-	bw = closing(edges2 > thresh, square(3))
-	cleared = clear_border(bw)
+def read_dem_wells(im, meta, effort=10):
+	grid = meta['grid']
+	iscale = meta['scale']
+	scale = im.shape[1] / iscale
+	fig, ax = plt.subplots(1, figsize=(10, 20))
+	ax.imshow(im)
+	rect = patches.Rectangle((grid['left'] * scale, grid['top'] * scale), width=grid['width'] * grid['scaleX'] * scale,
+													 height=grid['height'] * grid['scaleY'] * scale, angle=grid['angle'], linewidth=1,
+													 edgecolor='r', facecolor='none')
+	ar_pa = patches.Arrow(grid['left'] * scale, grid['top'] * scale, cos(((grid['angle'] - 90) / 360) * (2 * pi)) * 50,
+												sin(((grid['angle'] - 90) / 360) * (2 * pi)) * 50, color='green', width=10)
+	ax.add_patch(ar_pa)
+	ax.add_patch(rect)
 
-	box_ys = np.array([region.bbox[0] for region in regionprops(label(cleared)) if region.area >= 500 / scale and region.area < 5000 / scale])
-	box_xs = np.array([region.bbox[1] for region in regionprops(label(cleared)) if region.area >= 500 / scale and region.area < 5000 / scale])
-	y_groups = KMeans(n_clusters=number_of_y_groups).fit_predict(box_ys.reshape(-1, 1))
-	x_groups = KMeans(n_clusters=number_of_x_groups).fit_predict(box_xs.reshape(-1, 1))
-	y_poss = pd.DataFrame({'cat': y_groups, 'data': box_ys}).groupby('cat').median()['data'].to_list()
-	x_poss = pd.DataFrame({'cat': x_groups, 'data': box_xs}).groupby('cat').median()['data'].to_list()
-
-	x_diffs = []
-	for x in range(len(x_poss) - 1):
-		x_diffs.append(sorted(x_poss)[x + 1] - sorted(x_poss)[x])
-	y_diffs = []
-	for x in range(len(y_poss) - 1):
-		y_diffs.append(sorted(y_poss)[x + 1] - sorted(y_poss)[x])
-
-	s_size = int(np.median(x_diffs + y_diffs)) * scale
-
+	grid_size = max(grid['width'] / 12, grid['height'] / 12) * scale
+	width = grid_size * grid['scaleX']
+	height = grid_size * grid['scaleY']
+	ori_x = grid['left'] * scale
+	ori_y = grid['top'] * scale
+	angle = (grid['angle'] / 360) * 2 * pi
 	pps = []
-	for col, xs in enumerate(sorted(x_poss)):
-		for row, ys in enumerate(sorted(y_poss)):
-			well = ski_image[int(ys * scale):int(ys * scale) + s_size, int(xs * scale):int(xs * scale) + s_size]
-			pps.append([col, xs, row, ys, well, effort])
+	for row in range(8):
+		for col in range(12):
+			dx = ori_x + width * col * cos(angle) - height * row * sin(angle)
+			dy = ori_y + width * col * sin(angle) + height * row * cos(angle)
 
-	with Pool(4) as p:
+			dx1 = ori_x + width * col * cos(angle) - height * row * sin(angle)
+			dx2 = ori_x + width * (col) * cos(angle) - height * (row + 1) * sin(angle)
+			dx3 = ori_x + width * (col + 1) * cos(angle) - height * (row + 1) * sin(angle)
+			dx4 = ori_x + width * (col + 1) * cos(angle) - height * row * sin(angle)
+			dxs = [dx1, dx2, dx3, dx4]
+			dy1 = ori_y + width * col * sin(angle) + height * row * cos(angle)
+			dy2 = ori_y + width * col * sin(angle) + height * (row + 1) * cos(angle)
+			dy3 = ori_y + width * (col + 1) * sin(angle) + height * (row + 1) * cos(angle)
+			dy4 = ori_y + width * (col + 1) * sin(angle) + height * row * cos(angle)
+			dys = [dy1, dy2, dy3, dy4]
+
+			well = im[int(min(dys)):int(max(dys)), int(min(dxs)):int(max(dxs))]
+			pps.append([col, dx, row, dy, well, effort])
+
+	with Pool(8) as p:
 		rar = p.map(decode_thread, pps)
 
-	fig, ax = plt.subplots(figsize=(10, 6))
-	ax.imshow(ski_image)
-	#for col, xs in enumerate(sorted(x_poss)):
-	#	for row, ys in enumerate(sorted(y_poss)):
 	for irar in rar:
-		#{'row': row, 'xs': xs, 'col': col, 'ys': ys, 'barcode': 'failed'}
 		if irar['barcode'] == 'failed':
 			color = 'red'
 		else:
 			color = 'green'
-		rect = mpatches.Rectangle((irar['xs'] * scale, irar['ys'] * scale), s_size, s_size, fill=False, edgecolor=color, linewidth=2)
-		ax.add_patch(rect)
+		mrect = patches.Rectangle((irar['xs'], irar['ys']), width=width, height=height, angle=grid['angle'], linewidth=1, edgecolor=color,facecolor='none')
+		ax.add_patch(mrect)
 
 	f = BytesIO()
 	ax.axis('off')
@@ -107,7 +95,7 @@ async def hello(websocket, path):
 	image = io.imread(BytesIO(image))
 
 	io.imsave(f"{unique_name}.png", image)
-	rar, ready_to_send_fig = read_dem_wells(image, scale=2, direction='landscape', effort=10)
+	rar, ready_to_send_fig = read_dem_wells(image, loads(meta_data), effort=10)
 	print("analyzed. Returning results.")
 	await websocket.send(ready_to_send_fig)
 	await websocket.send(dumps(rar))

@@ -26,7 +26,25 @@ let program_state = 0;
         button action   goto status 0
 */
 
-document.addEventListener('DOMContentLoaded',() => video_source_selector.onchange=start_camera,false);
+function setCookie(name,value,days) {
+    let expires = "";
+    if (days) {
+        let date = new Date();
+        date.setTime(date.getTime() + (days*24*60*60*1000));
+        expires = "; expires=" + date.toUTCString();
+    }
+    document.cookie = name + "=" + (value || "")  + expires + "; path=/";
+}
+function getCookie(name) {
+    let nameEQ = name + "=";
+    let ca = document.cookie.split(';');
+    for(let i=0;i < ca.length;i++) {
+        let c = ca[i];
+        while (c.charAt(0)==' ') c = c.substring(1,c.length);
+        if (c.indexOf(nameEQ) == 0) return c.substring(nameEQ.length,c.length);
+    }
+    return null;
+}
 
 // activate copy/paste button
 let clipboard = new ClipboardJS('.btn');
@@ -231,6 +249,13 @@ navigator.mediaDevices.enumerateDevices().then(
                 video_source_selector.add(device_option)
             }
         });
+        let val = getCookie("camera_choice");
+        if (val) {
+            video_source_selector.value = val;
+        }
         do_state_change(0); // start the whole thing
-        video_source_selector.onchange=start_camera;
+        video_source_selector.onchange = (e) => {
+            setCookie("camera_choice", e.value, "10");
+            start_camera();
+        }
     });

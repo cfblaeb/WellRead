@@ -328,8 +328,9 @@ function FindMaximum_WidthHeight_ForCamera(deviceid)
 
     var temporaryConstraints = {
         "video": {
-            deviceId: {exact: deviceid},
+
             "mandatory": {
+                deviceId: deviceid,
             "minWidth": ResolutionsToCheck[mid].width,
             "minHeight": ResolutionsToCheck[mid].height,
             "maxWidth": ResolutionsToCheck[mid].width,

@@ -1,4 +1,4 @@
 pylibdmtx>=0.1.9
 websockets>=7.0
 matplotlib>=3.0.3
-sklearn-image>=0.14.2
+scikit-image>=0.14.2

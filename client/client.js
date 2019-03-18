@@ -256,7 +256,7 @@ navigator.mediaDevices.enumerateDevices().then(
         do_state_change(0); // start the whole thing
         video_source_selector.onchange = (e) => {
             console.log("changing source");
-            console.log(e.value);
+            console.log(e);
             setCookie("camera_choice", e.value, 10);
             start_camera();
         }

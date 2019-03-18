@@ -306,7 +306,8 @@ var ResolutionsToCheck = [
                 {width: 1920, height:1200},
                 {width: 2560, height:1440},
                 {width: 3840, height:2160},
-                {width: 4096, height:4000}
+                {width: 4096, height:3000},
+                {width: 5096, height:4000}
             ];
 
 var left = 0;

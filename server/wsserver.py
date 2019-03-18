@@ -108,7 +108,7 @@ async def hello(websocket, path):
 	image = io.imread(BytesIO(image))
 
 	io.imsave(f"{unique_name}.png", image)
-	rar, ready_to_send_fig = read_dem_wells(image, loads(meta_data), effort=10)
+	rar, ready_to_send_fig = read_dem_wells(image, loads(meta_data))
 	print("analyzed. Returning results.")
 	await websocket.send(ready_to_send_fig)
 	await websocket.send(dumps(rar))

@@ -88,11 +88,12 @@ function render() {
 function start_camera() {
     if (program_state===0) {
         if (video_el.srcObject) {video_el.srcObject.getTracks().forEach(function(track) {track.stop();});}
+        let deid = video_source_selector.value;
         navigator.mediaDevices.getUserMedia({
         video: {
-            width: 1920,
-            height: 1080,
-            deviceId: {exact: video_source_selector.value}
+            width: camera_list[deid].width.max,
+            height: camera_list[deid].height.max,
+            deviceId: {exact: deid}
         },
         }).then(
             (stream)=> {
@@ -239,6 +240,18 @@ back_button.addEventListener('click', () => do_state_change(-1));
 fwd_button.addEventListener('click', () => do_state_change(1));
 
 // list cameras
+let camera_list = Object();
+
+function check_out_cameras(device, cb) {
+    if (device.kind === 'videoinput') {
+        navigator.mediaDevices.getUserMedia({video: {deviceId: {exact: device.deviceId}}}).then(
+            (stream) => {
+                camera_list[device.deviceId] = stream.getVideoTracks()[0].getCapabilities();
+                cb();
+            })
+    } else cb();
+}
+
 navigator.mediaDevices.enumerateDevices().then(
     (devices) => {
         devices.forEach((device, i) => {
@@ -246,18 +259,27 @@ navigator.mediaDevices.enumerateDevices().then(
                 let device_option = document.createElement("option");
                 device_option.value = device.deviceId;
                 device_option.text = device.label || "camera " + i;
-                video_source_selector.add(device_option)
+                video_source_selector.add(device_option);
             }
         });
+
         let val = getCookie("camera_choice");
-        if (val) {
-            video_source_selector.value = val;
-        }
-        do_state_change(0); // start the whole thing
+        if (val) video_source_selector.value = val;
+
         video_source_selector.onchange = (e) => {
-            console.log("changing source");
-            console.log(e);
             setCookie("camera_choice", e.target.value, 10);
             start_camera();
-        }
+        };
+
+        // go through each camera and detect its capabilities and then start program
+        let requests = devices.reduce((promiseChain, device) => {
+            return promiseChain.then(() => new Promise((resolve) => {
+                check_out_cameras(device, resolve);
+            }));
+        }, Promise.resolve());
+
+        requests.then(() => {
+            console.log(camera_list);
+            do_state_change(0); // start the whole thing
+        });
     });

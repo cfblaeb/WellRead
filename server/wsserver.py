@@ -2,7 +2,7 @@ from asyncio import get_event_loop
 from websockets import serve
 from matplotlib import pyplot as plt
 from matplotlib import patches
-from skimage import io, transform
+from skimage import io
 from pylibdmtx.pylibdmtx import decode
 from multiprocessing import Pool
 from io import BytesIO
@@ -12,18 +12,16 @@ from math import cos, sin, pi
 
 
 def decode_thread(pospos):
-	col, xs, row, ys, well, effort = pospos
+	col, xs, row, ys, well = pospos
 	return_package = {'row': row, 'xs': xs, 'col': col, 'ys': ys, 'barcode': 'failed'}
 	if well.shape[0] > 0 and well.shape[1] > 0:
 		res = decode(well, max_count=1)
 		if res:
 			return_package['barcode'] = res[0].data.decode()
 		else:
-			for i in range(effort):
-				res = decode(transform.rotate(well, i), max_count=1)
-				if res:
-					return_package['barcode'] = res[0].data.decode()
-					break
+			res = decode(well, threshold=100, timeout=1000, max_count=1)
+			if res:
+				return_package['barcode'] = res[0].data.decode()
 	return return_package
 
 
@@ -34,7 +32,7 @@ def map_wells(col, row, orientation):
 		return f"{['H','G','F','E','D','C','B','A'][col]}{row+1}"
 
 
-def read_dem_wells(im, meta, effort=10):
+def read_dem_wells(im, meta):
 	grid = meta['grid']
 	iscale = meta['scale']
 	scale = im.shape[1] / iscale
@@ -78,7 +76,7 @@ def read_dem_wells(im, meta, effort=10):
 			dys = [dy1, dy2, dy3, dy4]
 
 			well = im[int(min(dys)):int(max(dys)), int(min(dxs)):int(max(dxs))]
-			pps.append([col, dx1, row, dy1, well, effort])
+			pps.append([col, dx1, row, dy1, well])
 
 	with Pool(8) as p:
 		rar = p.map(decode_thread, pps)
@@ -86,9 +84,11 @@ def read_dem_wells(im, meta, effort=10):
 	for irar in rar:
 		if irar['barcode'] == 'failed':
 			color = 'red'
+			lw = 3
 		else:
 			color = 'green'
-		mrect = patches.Rectangle((irar['xs'], irar['ys']), width=width, height=height, angle=grid['angle'], linewidth=1, edgecolor=color,facecolor='none')
+			lw = 1
+		mrect = patches.Rectangle((irar['xs'], irar['ys']), width=width, height=height, angle=grid['angle'], linewidth=lw, edgecolor=color,facecolor='none')
 		ax.add_patch(mrect)
 
 	f = BytesIO()

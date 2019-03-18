@@ -120,8 +120,8 @@ function start_camera() {
 }
 
 function send_picture_and_wait_for_response(image) {
-    let ws = new WebSocket("wss://wellread.ebdrup.biosustain.dtu.dk/ws");
-    //let ws = new WebSocket("ws://localhost:8765");
+    //let ws = new WebSocket("wss://wellread.ebdrup.biosustain.dtu.dk/ws");
+    let ws = new WebSocket("ws://localhost:8765");
     ws.onopen = () => {
         //send image
         ws.send(window.full_res_blob);
@@ -131,16 +131,14 @@ function send_picture_and_wait_for_response(image) {
     ws.onmessage = (msg) => {
         if (typeof(msg.data)=="string") {
             let results = JSON.parse(msg.data);
+            window.ress = results;
             results.forEach((result) => {
                 let new_row = result_table.insertRow(-1);
-                let row_cell = new_row.insertCell(0);
-                let col_cell = new_row.insertCell(1);
-                let barcode_cell = new_row.insertCell(2);
-                let row_text = document.createTextNode(result.row);
-                let col_text = document.createTextNode(result.col);
+                let loc_cell = new_row.insertCell(0);
+                let barcode_cell = new_row.insertCell(1);
+                let loc_text = document.createTextNode(result['loc']);
                 let barcode_text = document.createTextNode(result.barcode);
-                row_cell.appendChild(row_text);
-                col_cell.appendChild(col_text);
+                loc_cell.appendChild(loc_text);
                 barcode_cell.appendChild(barcode_text);
             });
         } else {

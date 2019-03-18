@@ -13,18 +13,25 @@ from math import cos, sin, pi
 
 def decode_thread(pospos):
 	col, xs, row, ys, well, effort = pospos
+	return_package = {'row': row, 'xs': xs, 'col': col, 'ys': ys, 'barcode': 'failed'}
+	if well.shape[0] > 0 and well.shape[1] > 0:
+		res = decode(well, max_count=1)
+		if res:
+			return_package['barcode'] = res[0].data.decode()
+		else:
+			for i in range(effort):
+				res = decode(transform.rotate(well, i), max_count=1)
+				if res:
+					return_package['barcode'] = res[0].data.decode()
+					break
+	return return_package
 
-	res = decode(well, max_count=1)
-	if res:
-		return {'row': row+1, 'xs': xs, 'col': col+1, 'ys': ys, 'barcode': res[0].data.decode()}
-	else:
-		found = False
-		for i in range(effort):
-			res = decode(transform.rotate(well, i), max_count=1)
-			if res:
-				return {'row': row+1, 'xs': xs, 'col': col+1, 'ys': ys, 'barcode': res[0].data.decode()}
-		if not found:
-			return {'row': row+1, 'xs': xs, 'col': col+1, 'ys': ys, 'barcode': 'failed'}
+
+def map_wells(col, row, orientation):
+	if orientation == 'landscape':  # "normal". A1 is top left
+		return f"{['A','B','C','D','E','F','G','H'][row]}{col+1}"
+	else:  # rotated 90 degrees right
+		return f"{['H','G','F','E','D','C','B','A'][col]}{row+1}"
 
 
 def read_dem_wells(im, meta, effort=10):
@@ -41,15 +48,24 @@ def read_dem_wells(im, meta, effort=10):
 	ax.add_patch(ar_pa)
 	ax.add_patch(rect)
 
-	grid_size = max(grid['width'] / 12, grid['height'] / 12) * scale
+	if grid['width'] > grid['height']:
+		grid_size = (grid['width'] / 12) * scale
+		orientation = "landscape"
+		no_rows = 8
+		no_cols = 12
+	else:
+		grid_size = (grid['height'] / 12) * scale
+		orientation = "portrait"
+		no_rows = 12
+		no_cols = 8
 	width = grid_size * grid['scaleX']
 	height = grid_size * grid['scaleY']
 	ori_x = grid['left'] * scale
 	ori_y = grid['top'] * scale
 	angle = (grid['angle'] / 360) * 2 * pi
 	pps = []
-	for row in range(8):
-		for col in range(12):
+	for row in range(no_rows):
+		for col in range(no_cols):
 			dx1 = ori_x + width * col * cos(angle) - height * row * sin(angle)
 			dx2 = ori_x + width * col * cos(angle) - height * (row + 1) * sin(angle)
 			dx3 = ori_x + width * (col + 1) * cos(angle) - height * (row + 1) * sin(angle)
@@ -78,7 +94,7 @@ def read_dem_wells(im, meta, effort=10):
 	f = BytesIO()
 	ax.axis('off')
 	fig.savefig(f, format='png', bbox_inches='tight')
-	return rar, f.getvalue()
+	return [{'loc': map_wells(entry['col'], entry['row'], orientation), 'barcode': entry['barcode']} for entry in rar], f.getvalue()
 
 
 async def hello(websocket, path):

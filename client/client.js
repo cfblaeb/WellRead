@@ -91,16 +91,8 @@ function start_camera() {
         let deid = video_source_selector.value;
         navigator.mediaDevices.getUserMedia({
         video: {
-            optional: [
-                {minWidth: 1024},
-                {minWidth: 1280},
-                {minWidth: 1920},
-                {minWidth: 2560},
-                {minWidth: 3264},
-                {minWidth: 4000},
-            ],
-            //width: 9999,//camera_list[deid].width.max,
-            //height: 9999,//camera_list[deid].height.max,
+            width: 9999,//camera_list[deid].width.max,
+            height: 9999,//camera_list[deid].height.max,
             deviceId: {exact: deid}
         },
         }).then(

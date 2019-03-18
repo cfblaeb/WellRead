@@ -330,7 +330,7 @@ function FindMaximum_WidthHeight_ForCamera(deviceid)
         "video": {
 
             "mandatory": {
-                deviceId: deviceid,
+                //deviceId: deviceid,
             "minWidth": ResolutionsToCheck[mid].width,
             "minHeight": ResolutionsToCheck[mid].height,
             "maxWidth": ResolutionsToCheck[mid].width,

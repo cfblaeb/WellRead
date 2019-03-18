@@ -50,11 +50,8 @@ def read_dem_wells(im, meta, effort=10):
 	pps = []
 	for row in range(8):
 		for col in range(12):
-			dx = ori_x + width * col * cos(angle) - height * row * sin(angle)
-			dy = ori_y + width * col * sin(angle) + height * row * cos(angle)
-
 			dx1 = ori_x + width * col * cos(angle) - height * row * sin(angle)
-			dx2 = ori_x + width * (col) * cos(angle) - height * (row + 1) * sin(angle)
+			dx2 = ori_x + width * col * cos(angle) - height * (row + 1) * sin(angle)
 			dx3 = ori_x + width * (col + 1) * cos(angle) - height * (row + 1) * sin(angle)
 			dx4 = ori_x + width * (col + 1) * cos(angle) - height * row * sin(angle)
 			dxs = [dx1, dx2, dx3, dx4]
@@ -65,7 +62,7 @@ def read_dem_wells(im, meta, effort=10):
 			dys = [dy1, dy2, dy3, dy4]
 
 			well = im[int(min(dys)):int(max(dys)), int(min(dxs)):int(max(dxs))]
-			pps.append([col, dx, row, dy, well, effort])
+			pps.append([col, dx1, row, dy1, well, effort])
 
 	with Pool(8) as p:
 		rar = p.map(decode_thread, pps)

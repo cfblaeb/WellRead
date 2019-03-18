@@ -91,8 +91,8 @@ function start_camera() {
         let deid = video_source_selector.value;
         navigator.mediaDevices.getUserMedia({
         video: {
-            width: camera_list[deid].width.max,
-            height: camera_list[deid].height.max,
+            width: 1920*2,//camera_list[deid].width.max,
+            height: 1080*2,//camera_list[deid].height.max,
             deviceId: {exact: deid}
         },
         }).then(
@@ -241,8 +241,8 @@ back_button.addEventListener('click', () => do_state_change(-1));
 fwd_button.addEventListener('click', () => do_state_change(1));
 
 // list cameras
-let camera_list = Object();
-
+//let camera_list = Object();
+/*
 function check_out_cameras(device, cb) {
     if (device.kind === 'videoinput') {
         navigator.mediaDevices.getUserMedia({video: {deviceId: {exact: device.deviceId}}}).then(
@@ -252,7 +252,7 @@ function check_out_cameras(device, cb) {
             })
     } else cb();
 }
-
+*/
 navigator.mediaDevices.enumerateDevices().then(
     (devices) => {
         devices.forEach((device, i) => {
@@ -271,17 +271,17 @@ navigator.mediaDevices.enumerateDevices().then(
             setCookie("camera_choice", e.target.value, 10);
             start_camera();
         };
-
+        /*
         // go through each camera and detect its capabilities and then start program
         let requests = devices.reduce((promiseChain, device) => {
             return promiseChain.then(() => new Promise((resolve) => {
                 check_out_cameras(device, resolve);
             }));
         }, Promise.resolve());
-
-        requests.then(() => {
-            console.log(camera_list);
+        */
+        //requests.then(() => {
+        //    console.log(camera_list);
             do_state_change(0); // start the whole thing
-        });
+        //});
 
     });

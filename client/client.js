@@ -91,8 +91,8 @@ function start_camera() {
         let deid = video_source_selector.value;
         navigator.mediaDevices.getUserMedia({
         video: {
-            width: 9999,//camera_list[deid].width.max,
-            height: 9999,//camera_list[deid].height.max,
+            width: 3264,//camera_list[deid].width.max,
+            height: 2448,//camera_list[deid].height.max,
             deviceId: {exact: deid}
         },
         }).then(
@@ -261,7 +261,6 @@ navigator.mediaDevices.enumerateDevices().then(
                 device_option.value = device.deviceId;
                 device_option.text = device.label || "camera " + i;
                 video_source_selector.add(device_option);
-                FindMaximum_WidthHeight_ForCamera(device.deviceId)
             }
         });
 
@@ -282,79 +281,7 @@ navigator.mediaDevices.enumerateDevices().then(
         */
         //requests.then(() => {
         //    console.log(camera_list);
-        //    do_state_change(0); // start the whole thing
+            do_state_change(0); // start the whole thing
         //});
 
     });
-
-
-var ResolutionsToCheck = [
-                {width: 1280, height:720},
-                {width: 1280, height:768},
-                {width: 1280, height:800},
-                {width: 1280, height:900},
-                {width: 1280, height:1000},
-                {width: 1920, height:1080},
-                {width: 1920, height:1200},
-                {width: 2560, height:1440},
-                {width: 3840, height:2160},
-                {width: 4096, height:3000},
-                {width: 5096, height:4000}
-            ];
-
-var left = 0;
-var right = ResolutionsToCheck.length;
-var selectedWidth;
-var selectedHeight;
-var mid;
-
-function FindMaximum_WidthHeight_ForCamera(deviceid)
-{
-    console.log("left:right = ", left, ":", right);
-    if(left > right)
-    {
-        console.log("Selected Height:Width = ", selectedWidth, ":", selectedHeight);
-        return;
-    }
-
-    mid = Math.floor((left + right) / 2);
-
-    var temporaryConstraints = {
-        "video": {
-
-            "mandatory": {
-                //deviceId: deviceid,
-            "minWidth": ResolutionsToCheck[mid].width,
-            "minHeight": ResolutionsToCheck[mid].height,
-            "maxWidth": ResolutionsToCheck[mid].width,
-            "maxHeight": ResolutionsToCheck[mid].height
-            },
-        "optional": []
-        }
-    }
-
-    navigator.mediaDevices.getUserMedia(temporaryConstraints).then(checkSuccess).catch(checkError);
-}
-
-function checkSuccess(stream)
-{
-    console.log("Success for --> " , mid , " ", ResolutionsToCheck[mid]);
-    selectedWidth = ResolutionsToCheck[mid].width;
-    selectedHeight = ResolutionsToCheck[mid].height;
-
-    left = mid+1;
-
-    for (let track of stream.getTracks())
-    {
-        track.stop()
-    }
-
-    FindMaximum_WidthHeight_ForCamera();
-}
-function checkError(error)
-{
-    console.log("Failed for --> " + mid , " ", ResolutionsToCheck[mid],  " ", error);
-    right = mid-1;
-
-    FindMaximum_WidthHeight_ForCamera();
-}

@@ -91,8 +91,8 @@ function start_camera() {
         let deid = video_source_selector.value;
         navigator.mediaDevices.getUserMedia({
         video: {
-            width: camera_list[deid].width.max,
-            height: camera_list[deid].height.max,
+            width: 9999,//camera_list[deid].width.max,
+            height: 9999,//camera_list[deid].height.max,
             deviceId: {exact: deid}
         },
         }).then(
@@ -270,16 +270,16 @@ navigator.mediaDevices.enumerateDevices().then(
             setCookie("camera_choice", e.target.value, 10);
             start_camera();
         };
-
+        /*
         // go through each camera and detect its capabilities and then start program
         let requests = devices.reduce((promiseChain, device) => {
             return promiseChain.then(() => new Promise((resolve) => {
                 check_out_cameras(device, resolve);
             }));
         }, Promise.resolve());
-
-        requests.then(() => {
-            console.log(camera_list);
+        */
+        //requests.then(() => {
+        //    console.log(camera_list);
             do_state_change(0); // start the whole thing
-        });
+        //});
     });

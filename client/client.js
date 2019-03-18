@@ -99,6 +99,7 @@ function start_camera() {
             (stream)=> {
                 video_el.onplay = () => {
                     // add widht+height tag to video el. Needed for fabricjs
+                    alert(video_el.videoWidth + " "+ video_el.videoHeight);
                     video_el.width = video_el.videoWidth;
                     video_el.height = video_el.videoHeight;
                     // if a canvas object already exist, delete it

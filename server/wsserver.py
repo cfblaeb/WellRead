@@ -99,6 +99,8 @@ def read_dem_wells(im, meta):
 
 async def hello(websocket, path):
 	image = await websocket.recv()
+	print(type(image))
+	print(image[:1000])
 	print("received image")
 	meta_data = await websocket.recv()
 	print("meta data recieved")

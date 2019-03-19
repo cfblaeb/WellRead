@@ -99,7 +99,7 @@ function start_camera() {
             (stream)=> {
                 video_el.onplay = () => {
                     // add widht+height tag to video el. Needed for fabricjs
-                    alert(video_el.videoWidth + " "+ video_el.videoHeight);
+                    //alert(video_el.videoWidth + " "+ video_el.videoHeight);
                     video_el.width = video_el.videoWidth;
                     video_el.height = video_el.videoHeight;
                     // if a canvas object already exist, delete it
@@ -140,8 +140,8 @@ function start_camera() {
 }
 
 function send_picture_and_wait_for_response(image) {
-    let ws = new WebSocket("wss://wellread.ebdrup.biosustain.dtu.dk/ws");
-    //let ws = new WebSocket("ws://localhost:8765");
+    //let ws = new WebSocket("wss://wellread.ebdrup.biosustain.dtu.dk/ws");
+    let ws = new WebSocket("ws://localhost:8765");
     ws.onopen = () => {
         //send image
         ws.send(window.full_res_blob);
@@ -176,6 +176,25 @@ function send_picture_and_wait_for_response(image) {
     }
 }
 
+function take_many_photos(how_many, delay, source, destination_el, destination_ctx, storage) {
+    if (how_many===0) {
+        return new Promise((resolve, reject) => resolve())
+    } else {
+		let p1 = new Promise((resolve, reject) => {
+			setTimeout(() => {
+			    console.log("taking screenshot ", how_many);
+			    destination_ctx.drawImage(source, 0, 0);
+                destination_el.toBlob((blob) => {
+                    storage.push(blob);
+                    console.log("screenshot saved ", how_many);
+                    take_many_photos(how_many-1, delay, source, destination_el, destination_ctx, storage).then(resolve);
+                }); // store a full_res blob for server
+            }, delay)
+        });
+		return p1.then(() => {return new Promise((resolve, reject) => resolve())});
+    }
+}
+
 function do_state_change(direction) {
     if (direction === -1) {
         if (program_state>0) {
@@ -188,6 +207,7 @@ function do_state_change(direction) {
             program_state = 0; // reset
         }
     }
+
     switch (program_state) {
         case 0:
             if (direction !== 0) { // we came from either 1 or 2
@@ -202,34 +222,52 @@ function do_state_change(direction) {
             fwd_button.innerText = "Take photo >";
             break;
         case 1:
+            // set buttons to "loading"
+            video_source_selector.disabled = true;
+            back_button.disabled = true;
+            fwd_button.disabled = true;
+            back_button.innerHTML = '<span class="spinner-grow" role="status" aria-hidden="true"></span>Loading...';
+            fwd_button.innerHTML = '<span class="spinner-border" role="status" aria-hidden="true"></span>Loading...';
+
             window.canvas.clear();
             //create full res canvas copy of video
             if (direction === 1) { // if we came from state 0 then save a new full res video screenshot
+                // take 10 images over a period of 1 sec
                 fullres_canvas.width = video_el.videoWidth;
                 fullres_canvas.height = video_el.videoHeight;
-                fullres_canvas.getContext('2d').drawImage(video_el, 0, 0);
-                fullres_canvas.toBlob((blob) => window.full_res_blob = blob); // store a full_res blob for server
-                //stop camera
-                video_el.srcObject.getTracks().forEach((track) => track.stop());
+                window.full_res_blob = [];
+                take_many_photos(10, 1, video_el, fullres_canvas, fullres_canvas.getContext('2d'), window.full_res_blob).then(() => {
+                    //stop camera
+                    video_el.srcObject.getTracks().forEach((track) => track.stop());
+                    fabric.Image.fromURL(fullres_canvas.toDataURL(), (e) => {
+                        e.set('selectable', false);
+                        e.scaleToWidth(window.browser_width);
+                        window.canvas.add(e);
+                        draw_grid();
+                    });
+                    console.log("ready");
+                    back_button.disabled = false;
+                    fwd_button.disabled = false;
+                    back_button.innerHTML = "< Retake photo";
+                    fwd_button.innerHTML = "Analyze barcodes >";
+                });
+            } else {
+                fabric.Image.fromURL(fullres_canvas.toDataURL(), (e) => {
+                    e.set('selectable', false);
+                    e.scaleToWidth(window.browser_width);
+                    window.canvas.add(e);
+                    draw_grid();
+                });
+                back_button.disabled = false;
+                fwd_button.disabled = false;
+                back_button.innerHTML = "< Retake photo";
+                fwd_button.innerHTML = "Analyze barcodes >";
             }
-            fabric.Image.fromURL(fullres_canvas.toDataURL(), (e) => {
-                e.set('selectable', false);
-                e.scaleToWidth(window.browser_width);
-                window.canvas.add(e);
-                draw_grid();
-            });
-
-            // set button text
-            video_source_selector.disabled = true;
-            back_button.disabled = false;
-            back_button.innerText = "< Retake photo";
-            fwd_button.innerText = "Analyze barcodes >";
             break;
         case 2:
             // send data
             send_picture_and_wait_for_response();
             // receive data
-            // handle data
             // set button text
             back_button.innerText = "< Change grid";
             fwd_button.innerText = "Restart >";

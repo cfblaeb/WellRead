@@ -113,5 +113,5 @@ async def hello(websocket, path):
 	await websocket.send(ready_to_send_fig)
 	await websocket.send(dumps(rar))
 
-get_event_loop().run_until_complete(serve(hello, '127.0.0.1', 8765, max_size=10E6))
+get_event_loop().run_until_complete(serve(hello, '127.0.0.1', 8765, max_size=100E6))
 get_event_loop().run_forever()

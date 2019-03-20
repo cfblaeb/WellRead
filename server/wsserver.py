@@ -11,16 +11,22 @@ from uuid import uuid4
 from math import cos, sin, pi
 from base64 import decodebytes
 from sys import maxsize
+from collections import Counter
 
 
 def decode_thread(pp_more):
 	if pp_more['well'].shape[0] > 0 and pp_more['well'].shape[1] > 0:
-		res = decode(pp_more['well'], max_count=1)
-		if res:
+		# try shrink
+		res = decode(pp_more['well'], shrink=2, max_count=1)
+		if res and res[0].data.decode().isnumeric():
 			return {**pp_more['pp'], 'barcode': res[0].data.decode()}
-		# second try
-		res = decode(pp_more['well'], threshold=100, timeout=1000, max_count=1)
-		if res:
+		# try defaults
+		res = decode(pp_more['well'], max_count=1)
+		if res and res[0].data.decode().isnumeric():
+			return {**pp_more['pp'], 'barcode': res[0].data.decode()}
+		# try threshold
+		res = decode(pp_more['well'], threshold=100, max_count=1)
+		if res and res[0].data.decode().isnumeric():
 			return {**pp_more['pp'], 'barcode': res[0].data.decode()}
 	return {**pp_more['pp'], 'barcode': "failed"}
 
@@ -84,14 +90,20 @@ def read_dem_wells(all_data: dict):
 	for well_no in range(no_rows * no_cols):
 		# check that its the same well
 		if len(set([results[i][well_no]['col'] for i in range(len(results))])) == 1 and len(set([results[i][well_no]['row'] for i in range(len(results))])) == 1:
-			barcodes = set([results[i][well_no]['barcode'] for i in range(len(results)) if results[i][well_no]['barcode'] != 'failed'])
-			if len(barcodes) == 1:
-				print("sucess")
-				rar.append({**results[0][well_no], 'barcode': barcodes.pop()})
-			elif len(barcodes) == 0:
+			barcodes = [results[i][well_no]['barcode'] for i in range(len(results)) if results[i][well_no]['barcode'] != 'failed']
+			barcodes_set = set(barcodes)
+			if len(barcodes_set) == 1:
+				rar.append({**results[0][well_no], 'barcode': barcodes_set.pop()})
+			elif len(barcodes_set) == 0:
 				rar.append({**results[0][well_no], 'barcode': 'failed'})
 			else:
-				rar.append({**results[0][well_no], 'barcode': 'multi_barcodes'})
+				# lets see if theres a concensus
+				barcodes_counter = Counter(barcodes)
+				two_most_common = barcodes_counter.most_common(2)
+				if two_most_common[0][1] == two_most_common[1][1]:  # cant decide
+					rar.append({**results[0][well_no], 'barcode': f"uncertain: {barcodes}"})
+				else:
+					rar.append({**results[0][well_no], 'barcode': two_most_common[0][0]})
 		else:
 			print("error...not same well?")
 

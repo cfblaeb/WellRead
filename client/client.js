@@ -91,8 +91,8 @@ function start_camera() {
         let deid = video_source_selector.value;
         navigator.mediaDevices.getUserMedia({
         video: {
-            width: 1920*2,//camera_list[deid].width.max,
-            height: 1080*2,//camera_list[deid].height.max,
+            width: 1920,//camera_list[deid].width.max,
+            //height: 1080*2,//camera_list[deid].height.max,
             deviceId: {exact: deid}
         },
         }).then(
@@ -206,7 +206,7 @@ function start_ani(current) {
     window.canvas.moveTo(window.ani[current], 0);
     let next = current + 1;
     if (next >= window.ani.length) next = 0;
-    if (program_state === 1) setTimeout(start_ani, 100, next);
+    if (program_state === 1) setTimeout(start_ani, 500, next);
 }
 
 function do_state_change(direction) {
@@ -243,7 +243,6 @@ function do_state_change(direction) {
             back_button.innerHTML = '<span class="spinner-grow" role="status" aria-hidden="true"></span>Loading...';
             fwd_button.innerHTML = '<span class="spinner-border" role="status" aria-hidden="true"></span>Loading...';
 
-            window.canvas.clear();
             //create full res canvas copy of video
             if (direction === 1) { // if we came from state 0 then save a new full res video screenshot
                 // take 10 images over a period of 1 sec
@@ -260,6 +259,7 @@ function do_state_change(direction) {
                         window.canvas.add(e);
 
                     });*/
+                    window.canvas.clear();
                     start_ani(0);
                     draw_grid();
                     back_button.disabled = false;
@@ -274,6 +274,7 @@ function do_state_change(direction) {
                     window.canvas.add(e);
                     draw_grid();
                 });*/
+                window.canvas.clear();
                 start_ani(0);
                 draw_grid();
                 back_button.disabled = false;

@@ -9,7 +9,8 @@ from io import BytesIO
 from json import dumps, loads
 from uuid import uuid4
 from math import cos, sin, pi
-import base64
+from base64 import decodebytes
+from sys import maxsize
 
 
 def decode_thread(pp_more):
@@ -42,7 +43,7 @@ def read_dem_wells(all_data: dict):
 	grid = all_data['grid']
 	iscale = all_data['scale']
 	images = all_data['images']
-	image_zero = io.imread(BytesIO(base64.decodebytes(images[0]['src'].split(',')[1].encode())))
+	image_zero = io.imread(BytesIO(decodebytes(images[0]['src'].split(',')[1].encode())))
 
 	scale = image_zero.shape[1] / iscale
 	if grid['width'] > grid['height']:
@@ -76,7 +77,7 @@ def read_dem_wells(all_data: dict):
 
 			pps.append({'col': col, 'row': row, 'minY': int(min(dys)), 'maxY': int(max(dys)), 'minX': int(min(dxs)), 'maxX': int(max(dxs)), 'x0': dx1, 'y0': dy1})
 
-	results = [analyze_image(io.imread(BytesIO(base64.decodebytes(image['src'].split(',')[1].encode()))), pps) for image in images]
+	results = [analyze_image(io.imread(BytesIO(decodebytes(image['src'].split(',')[1].encode()))), pps) for image in images]
 
 	# analyze results
 	rar = []  # list of well objects with {'row', 'col', 'barcode', 'x0', 'y0'}
@@ -142,5 +143,5 @@ async def hello(websocket, path):
 	await websocket.send(ready_to_send_fig)
 	await websocket.send(dumps(rar))
 
-get_event_loop().run_until_complete(serve(hello, '127.0.0.1', 8765, max_size=1E20))
+get_event_loop().run_until_complete(serve(hello, '127.0.0.1', 8765, max_size=maxsize))
 get_event_loop().run_forever()

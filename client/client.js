@@ -251,7 +251,7 @@ function do_state_change(direction) {
                 fullres_canvas.height = video_el.videoHeight;
                 window.full_res_blob = [];
                 window.ani = [];
-                take_many_photos(10, 1, video_el, fullres_canvas, fullres_canvas.getContext('2d'), window.full_res_blob).then(() => {
+                take_many_photos(5, 1, video_el, fullres_canvas, fullres_canvas.getContext('2d'), window.full_res_blob).then(() => {
                     //stop camera
                     video_el.srcObject.getTracks().forEach((track) => track.stop());
                     /*fabric.Image.fromURL(fullres_canvas.toDataURL(), (e) => {

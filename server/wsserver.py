@@ -9,43 +9,42 @@ from io import BytesIO
 from json import dumps, loads
 from uuid import uuid4
 from math import cos, sin, pi
+import base64
 
 
-def decode_thread(pospos):
-	col, xs, row, ys, well = pospos
-	return_package = {'row': row, 'xs': xs, 'col': col, 'ys': ys, 'barcode': 'failed'}
-	if well.shape[0] > 0 and well.shape[1] > 0:
-		res = decode(well, max_count=1)
+def decode_thread(pp_more):
+	if pp_more['well'].shape[0] > 0 and pp_more['well'].shape[1] > 0:
+		res = decode(pp_more['well'], max_count=1)
 		if res:
-			return_package['barcode'] = res[0].data.decode()
-		else:
-			res = decode(well, threshold=100, timeout=1000, max_count=1)
-			if res:
-				return_package['barcode'] = res[0].data.decode()
-	return return_package
+			return {**pp_more['pp'], 'barcode': res[0].data.decode()}
+		# second try
+		res = decode(pp_more['well'], threshold=100, timeout=1000, max_count=1)
+		if res:
+			return {**pp_more['pp'], 'barcode': res[0].data.decode()}
+	return {**pp_more['pp'], 'barcode': "failed"}
 
 
 def map_wells(col, row, orientation):
 	if orientation == 'landscape':  # "normal". A1 is top left
-		return f"{['A','B','C','D','E','F','G','H'][row]}{col+1}"
+		return f"{['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'][row]}{col + 1}"
 	else:  # rotated 90 degrees right
-		return f"{['H','G','F','E','D','C','B','A'][col]}{row+1}"
+		return f"{['H', 'G', 'F', 'E', 'D', 'C', 'B', 'A'][col]}{row + 1}"
 
 
-def read_dem_wells(im, meta):
-	grid = meta['grid']
-	iscale = meta['scale']
-	scale = im.shape[1] / iscale
-	fig, ax = plt.subplots(1, figsize=(10, 20))
-	ax.imshow(im)
-	rect = patches.Rectangle((grid['left'] * scale, grid['top'] * scale), width=grid['width'] * grid['scaleX'] * scale,
-													 height=grid['height'] * grid['scaleY'] * scale, angle=grid['angle'], linewidth=1,
-													 edgecolor='r', facecolor='none')
-	ar_pa = patches.Arrow(grid['left'] * scale, grid['top'] * scale, cos(((grid['angle'] - 90) / 360) * (2 * pi)) * 50,
-												sin(((grid['angle'] - 90) / 360) * (2 * pi)) * 50, color='green', width=10)
-	ax.add_patch(ar_pa)
-	ax.add_patch(rect)
+def analyze_image(image, pps):
+	wells = [{'pp': pp, 'well': image[pp['minY']:pp['maxY'], pp['minX']:pp['maxX']]} for pp in pps]
+	with Pool(8) as p:
+		rar = p.map(decode_thread, wells)
+	return rar
 
+
+def read_dem_wells(all_data: dict):
+	grid = all_data['grid']
+	iscale = all_data['scale']
+	images = all_data['images']
+	image_zero = io.imread(BytesIO(base64.decodebytes(images[0]['src'].split(',')[1].encode())))
+
+	scale = image_zero.shape[1] / iscale
 	if grid['width'] > grid['height']:
 		grid_size = (grid['width'] / 12) * scale
 		orientation = "landscape"
@@ -75,20 +74,48 @@ def read_dem_wells(im, meta):
 			dy4 = ori_y + width * (col + 1) * sin(angle) + height * row * cos(angle)
 			dys = [dy1, dy2, dy3, dy4]
 
-			well = im[int(min(dys)):int(max(dys)), int(min(dxs)):int(max(dxs))]
-			pps.append([col, dx1, row, dy1, well])
+			pps.append({'col': col, 'row': row, 'minY': int(min(dys)), 'maxY': int(max(dys)), 'minX': int(min(dxs)), 'maxX': int(max(dxs)), 'x0': dx1, 'y0': dy1})
 
-	with Pool(8) as p:
-		rar = p.map(decode_thread, pps)
+	results = [analyze_image(io.imread(BytesIO(base64.decodebytes(image['src'].split(',')[1].encode()))), pps) for image in images]
+
+	# analyze results
+	rar = []  # list of well objects with {'row', 'col', 'barcode', 'x0', 'y0'}
+	for well_no in range(no_rows * no_cols):
+		# check that its the same well
+		if len(set([results[i][well_no]['col'] for i in range(len(results))])) == 1 and len(set([results[i][well_no]['row'] for i in range(len(results))])) == 1:
+			barcodes = set([results[i][well_no]['barcode'] for i in range(len(results)) if results[i][well_no]['barcode'] != 'failed'])
+			if len(barcodes) == 1:
+				print("sucess")
+				rar.append({**results[0][well_no], 'barcode': barcodes.pop()})
+			elif len(barcodes) == 0:
+				rar.append({**results[0][well_no], 'barcode': 'failed'})
+			else:
+				rar.append({**results[0][well_no], 'barcode': 'multi_barcodes'})
+		else:
+			print("error...not same well?")
+
+	# draw result consensus
+	fig, ax = plt.subplots(1, figsize=(10, 20))
+	ax.imshow(image_zero)
+	rect = patches.Rectangle((grid['left'] * scale, grid['top'] * scale), width=grid['width'] * grid['scaleX'] * scale,
+							 height=grid['height'] * grid['scaleY'] * scale, angle=grid['angle'], linewidth=1,
+							 edgecolor='r', facecolor='none')
+	ar_pa = patches.Arrow(grid['left'] * scale, grid['top'] * scale, cos(((grid['angle'] - 90) / 360) * (2 * pi)) * 50,
+						  sin(((grid['angle'] - 90) / 360) * (2 * pi)) * 50, color='green', width=10)
+	ax.add_patch(rect)
+	ax.add_patch(ar_pa)
 
 	for irar in rar:
 		if irar['barcode'] == 'failed':
 			color = 'red'
 			lw = 3
+		elif irar['barcode'] == 'multi_barcodes':
+			color = 'blue'
+			lw = 3
 		else:
 			color = 'green'
 			lw = 1
-		mrect = patches.Rectangle((irar['xs'], irar['ys']), width=width, height=height, angle=grid['angle'], linewidth=lw, edgecolor=color,facecolor='none')
+		mrect = patches.Rectangle((irar['x0'], irar['y0']), width=width, height=height, angle=grid['angle'], linewidth=lw, edgecolor=color, facecolor='none')
 		ax.add_patch(mrect)
 
 	f = BytesIO()
@@ -98,19 +125,19 @@ def read_dem_wells(im, meta):
 
 
 async def hello(websocket, path):
-	image = await websocket.recv()
-	print(type(image))
-	print(image[:1000])
-	print("received image")
-	meta_data = await websocket.recv()
-	print("meta data recieved")
+	all_data = await websocket.recv()
+	#print(type(image))
+	#print(image[:1000])
+	#print("received image")
+	#meta_data = await websocket.recv()
+	print("data recieved")
 	unique_name = str(uuid4())
 	with open(unique_name + ".json", 'w') as f:
-		f.write(meta_data)
-	image = io.imread(BytesIO(image))
+		f.write(all_data)
+	#image = io.imread(BytesIO(image))
 
-	io.imsave(f"{unique_name}.png", image)
-	rar, ready_to_send_fig = read_dem_wells(image, loads(meta_data))
+	#io.imsave(f"{unique_name}.png", image)
+	rar, ready_to_send_fig = read_dem_wells(loads(all_data))
 	print("analyzed. Returning results.")
 	await websocket.send(ready_to_send_fig)
 	await websocket.send(dumps(rar))

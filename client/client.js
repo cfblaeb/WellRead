@@ -140,13 +140,10 @@ function start_camera() {
 }
 
 function send_picture_and_wait_for_response(image) {
-    //let ws = new WebSocket("wss://wellread.ebdrup.biosustain.dtu.dk/ws");
-    let ws = new WebSocket("ws://localhost:8765");
+    let ws = new WebSocket("wss://wellread.ebdrup.biosustain.dtu.dk/ws");
+    //let ws = new WebSocket("ws://localhost:8765");
     ws.onopen = () => {
-        //send image
-        ws.send(window.full_res_blob);
-        //send grid info
-        ws.send(JSON.stringify({'grid': window.pl, 'scale': window.browser_width}));
+        ws.send(JSON.stringify({'grid': window.pl, 'scale': window.browser_width, 'images': window.ani}));
     };
     ws.onmessage = (msg) => {
         if (typeof(msg.data)=="string") {
@@ -184,15 +181,32 @@ function take_many_photos(how_many, delay, source, destination_el, destination_c
 			setTimeout(() => {
 			    console.log("taking screenshot ", how_many);
 			    destination_ctx.drawImage(source, 0, 0);
-                destination_el.toBlob((blob) => {
-                    storage.push(blob);
-                    console.log("screenshot saved ", how_many);
-                    take_many_photos(how_many-1, delay, source, destination_el, destination_ctx, storage).then(resolve);
-                }); // store a full_res blob for server
+			    fabric.Image.fromURL(fullres_canvas.toDataURL(), (e) => {
+                        e.set('selectable', false);
+                        e.scaleToWidth(window.browser_width);
+                        window.ani.push(e);
+                        take_many_photos(how_many-1, delay, source, destination_el, destination_ctx, storage).then(resolve);
+                    });
+                //destination_el.toBlob((blob) => {
+                //    storage.push(blob);
+                //    console.log("screenshot saved ", how_many);
+
+                //}); // store a full_res blob for server
             }, delay)
         });
 		return p1.then(() => {return new Promise((resolve, reject) => resolve())});
     }
+}
+
+function start_ani(current) {
+    let prev = current - 1;
+    if (prev < 0) prev = window.ani.length -1;
+    window.canvas.remove(window.ani[prev]);
+    window.canvas.add(window.ani[current]);
+    window.canvas.moveTo(window.ani[current], 0);
+    let next = current + 1;
+    if (next >= window.ani.length) next = 0;
+    if (program_state === 1) setTimeout(start_ani, 100, next);
 }
 
 function do_state_change(direction) {
@@ -236,28 +250,32 @@ function do_state_change(direction) {
                 fullres_canvas.width = video_el.videoWidth;
                 fullres_canvas.height = video_el.videoHeight;
                 window.full_res_blob = [];
+                window.ani = [];
                 take_many_photos(10, 1, video_el, fullres_canvas, fullres_canvas.getContext('2d'), window.full_res_blob).then(() => {
                     //stop camera
                     video_el.srcObject.getTracks().forEach((track) => track.stop());
-                    fabric.Image.fromURL(fullres_canvas.toDataURL(), (e) => {
+                    /*fabric.Image.fromURL(fullres_canvas.toDataURL(), (e) => {
                         e.set('selectable', false);
                         e.scaleToWidth(window.browser_width);
                         window.canvas.add(e);
-                        draw_grid();
-                    });
-                    console.log("ready");
+
+                    });*/
+                    start_ani(0);
+                    draw_grid();
                     back_button.disabled = false;
                     fwd_button.disabled = false;
                     back_button.innerHTML = "< Retake photo";
                     fwd_button.innerHTML = "Analyze barcodes >";
                 });
             } else {
-                fabric.Image.fromURL(fullres_canvas.toDataURL(), (e) => {
+                /*fabric.Image.fromURL(fullres_canvas.toDataURL(), (e) => {
                     e.set('selectable', false);
                     e.scaleToWidth(window.browser_width);
                     window.canvas.add(e);
                     draw_grid();
-                });
+                });*/
+                start_ani(0);
+                draw_grid();
                 back_button.disabled = false;
                 fwd_button.disabled = false;
                 back_button.innerHTML = "< Retake photo";

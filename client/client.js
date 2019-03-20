@@ -107,7 +107,7 @@ function start_camera() {
                         window.canvas.dispose();
                     }
                     // size the canvas
-                    window.browser_width = document.documentElement.clientWidth - 150; // extra to get some space
+                    window.browser_width = document.documentElement.clientWidth - 200; // extra to get some space
                     let webcam_width = video_el.videoWidth;
                     if (window.browser_width>webcam_width) {
                         window.browser_width = webcam_width;
@@ -124,12 +124,12 @@ function start_camera() {
                             activeObj.set({'borderColor':'#ff0000','cornerColor':'#fbb802'});
                         }
                     });
+                    window.canvas.on('mouse:down', state_forward);
+
                     window.webcam = new fabric.Image(video_el, {selectable: false});
                     window.webcam.scaleToWidth(window.browser_width);
                     window.canvas.add(window.webcam);
-                    fabric.util.requestAnimFrame(
-                        render
-                    );
+                    fabric.util.requestAnimFrame(render);
                 };
 
                 video_el.srcObject=stream;
@@ -180,6 +180,8 @@ function take_many_photos(how_many, delay, source, destination_el, destination_c
 		let p1 = new Promise((resolve, reject) => {
 			setTimeout(() => {
 			    console.log("taking screenshot ", how_many);
+			    let text40 = new fabric.Text("click" , {fontSize: 40, left: 100, top: 300-40*how_many });
+			    window.canvas.add(text40);
 			    destination_ctx.drawImage(source, 0, 0);
 			    fabric.Image.fromURL(fullres_canvas.toDataURL(), (e) => {
                         e.set('selectable', false);
@@ -207,6 +209,11 @@ function start_ani(current) {
     let next = current + 1;
     if (next >= window.ani.length) next = 0;
     if (program_state === 1) setTimeout(start_ani, 500, next);
+}
+
+function state_forward() {
+    console.log("hello");
+    do_state_change(1);
 }
 
 function do_state_change(direction) {
@@ -237,6 +244,7 @@ function do_state_change(direction) {
             break;
         case 1:
             // set buttons to "loading"
+            window.canvas.off('mouse:down', state_forward);
             video_source_selector.disabled = true;
             back_button.disabled = true;
             fwd_button.disabled = true;
@@ -250,6 +258,8 @@ function do_state_change(direction) {
                 fullres_canvas.height = video_el.videoHeight;
                 window.full_res_blob = [];
                 window.ani = [];
+                let text40 = new fabric.Text("taking 5 pictures. Hold still!" , {fontSize: 40, left: 100, top: 400 });
+			    window.canvas.add(text40);
                 take_many_photos(5, 1, video_el, fullres_canvas, fullres_canvas.getContext('2d'), window.full_res_blob).then(() => {
                     //stop camera
                     video_el.srcObject.getTracks().forEach((track) => track.stop());

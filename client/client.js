@@ -140,8 +140,8 @@ function start_camera() {
 }
 
 function send_picture_and_wait_for_response(image) {
-    //let ws = new WebSocket("wss://wellread.ebdrup.biosustain.dtu.dk/ws");
-    let ws = new WebSocket("ws://localhost:8765");
+    let ws = new WebSocket("wss://wellread.ebdrup.biosustain.dtu.dk/ws");
+    //let ws = new WebSocket("ws://localhost:8765");
     ws.onopen = () => {
         ws.send(JSON.stringify({'grid': window.pl, 'scale': window.browser_width, 'images': window.ani}));
     };

@@ -179,8 +179,7 @@ function take_many_photos(how_many, delay, source, destination_el, destination_c
     } else {
 		let p1 = new Promise((resolve, reject) => {
 			setTimeout(() => {
-			    console.log("taking screenshot ", how_many);
-			    let text40 = new fabric.Text("click" , {fontSize: 40, left: 100, top: 300-40*how_many });
+			    let text40 = new fabric.Text("click" , {fontSize: 40, fill:'red', stroke:'green', left: 20, top: 10+(40*how_many) });
 			    window.canvas.add(text40);
 			    destination_ctx.drawImage(source, 0, 0);
 			    fabric.Image.fromURL(fullres_canvas.toDataURL(), (e) => {
@@ -258,7 +257,7 @@ function do_state_change(direction) {
                 fullres_canvas.height = video_el.videoHeight;
                 window.full_res_blob = [];
                 window.ani = [];
-                let text40 = new fabric.Text("taking 5 pictures. Hold still!" , {fontSize: 40, left: 100, top: 400 });
+                let text40 = new fabric.Text("taking 5 pictures. Hold still!" , {fontSize: 40, left: 10, top: 10, fill:'red', stroke:'white'});
 			    window.canvas.add(text40);
                 take_many_photos(5, 1, video_el, fullres_canvas, fullres_canvas.getContext('2d'), window.full_res_blob).then(() => {
                     //stop camera

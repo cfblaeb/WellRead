@@ -17,15 +17,28 @@ from collections import Counter
 def decode_thread(pp_more):
 	if pp_more['well'].shape[0] > 0 and pp_more['well'].shape[1] > 0:
 		# try shrink
-		res = decode(pp_more['well'], shrink=2, max_count=1)
+		res = decode(pp_more['well'], timeout=10, shrink=2, max_count=1)
 		if res and res[0].data.decode().isnumeric():
 			return {**pp_more['pp'], 'barcode': res[0].data.decode()}
 		# try defaults
-		res = decode(pp_more['well'], max_count=1)
+		res = decode(pp_more['well'], timeout=10, max_count=1)
 		if res and res[0].data.decode().isnumeric():
 			return {**pp_more['pp'], 'barcode': res[0].data.decode()}
 		# try threshold
-		res = decode(pp_more['well'], threshold=100, max_count=1)
+		res = decode(pp_more['well'], timeout=10, threshold=100, max_count=1)
+		if res and res[0].data.decode().isnumeric():
+			return {**pp_more['pp'], 'barcode': res[0].data.decode()}
+		# give it more time
+			# try shrink
+		res = decode(pp_more['well'], timeout=100, shrink=2, max_count=1)
+		if res and res[0].data.decode().isnumeric():
+			return {**pp_more['pp'], 'barcode': res[0].data.decode()}
+		# try defaults
+		res = decode(pp_more['well'], timeout=100, max_count=1)
+		if res and res[0].data.decode().isnumeric():
+			return {**pp_more['pp'], 'barcode': res[0].data.decode()}
+		# try threshold
+		res = decode(pp_more['well'], timeout=100, threshold=100, max_count=1)
 		if res and res[0].data.decode().isnumeric():
 			return {**pp_more['pp'], 'barcode': res[0].data.decode()}
 	return {**pp_more['pp'], 'barcode': "failed"}
@@ -139,21 +152,15 @@ def read_dem_wells(all_data: dict):
 
 async def hello(websocket, path):
 	all_data = await websocket.recv()
-	#print(type(image))
-	#print(image[:1000])
-	#print("received image")
-	#meta_data = await websocket.recv()
 	print("data recieved")
 	unique_name = str(uuid4())
 	with open(unique_name + ".json", 'w') as f:
 		f.write(all_data)
-	#image = io.imread(BytesIO(image))
-
-	#io.imsave(f"{unique_name}.png", image)
 	rar, ready_to_send_fig = read_dem_wells(loads(all_data))
 	print("analyzed. Returning results.")
 	await websocket.send(ready_to_send_fig)
 	await websocket.send(dumps(rar))
 
-get_event_loop().run_until_complete(serve(hello, '127.0.0.1', 8765, max_size=maxsize))
-get_event_loop().run_forever()
+if __name__ == "__main__":
+	get_event_loop().run_until_complete(serve(hello, '127.0.0.1', 8765, max_size=maxsize))
+	get_event_loop().run_forever()

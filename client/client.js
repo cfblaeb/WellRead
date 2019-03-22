@@ -140,8 +140,8 @@ function start_camera() {
 }
 
 function send_picture_and_wait_for_response(image) {
-    let ws = new WebSocket("wss://wellread.ebdrup.biosustain.dtu.dk/ws");
-    //let ws = new WebSocket("ws://localhost:8765");
+    //let ws = new WebSocket("wss://wellread.ebdrup.biosustain.dtu.dk/ws");
+    let ws = new WebSocket("ws://localhost:8765");
     ws.onopen = () => {
         ws.send(JSON.stringify({'grid': window.pl, 'scale': window.browser_width, 'images': window.ani}));
     };
@@ -208,7 +208,7 @@ function start_ani(current) {
     window.canvas.moveTo(window.ani[current], 0);
     let next = current + 1;
     if (next >= window.ani.length) next = 0;
-    if (program_state === 1) setTimeout(start_ani, 500, next);
+    if (program_state === 1) setTimeout(start_ani, 200, next);
 }
 
 function state_forward() {
@@ -263,12 +263,6 @@ function do_state_change(direction) {
                 take_many_photos(5, 1, video_el, fullres_canvas, fullres_canvas.getContext('2d'), window.full_res_blob).then(() => {
                     //stop camera
                     video_el.srcObject.getTracks().forEach((track) => track.stop());
-                    /*fabric.Image.fromURL(fullres_canvas.toDataURL(), (e) => {
-                        e.set('selectable', false);
-                        e.scaleToWidth(window.browser_width);
-                        window.canvas.add(e);
-
-                    });*/
                     window.canvas.clear();
                     start_ani(0);
                     draw_grid();
@@ -278,12 +272,6 @@ function do_state_change(direction) {
                     fwd_button.innerHTML = "Analyze barcodes >";
                 });
             } else {
-                /*fabric.Image.fromURL(fullres_canvas.toDataURL(), (e) => {
-                    e.set('selectable', false);
-                    e.scaleToWidth(window.browser_width);
-                    window.canvas.add(e);
-                    draw_grid();
-                });*/
                 window.canvas.clear();
                 start_ani(0);
                 draw_grid();
@@ -294,9 +282,8 @@ function do_state_change(direction) {
             }
             break;
         case 2:
-            // send data
+            // send+receive data
             send_picture_and_wait_for_response();
-            // receive data
             // set button text
             back_button.innerText = "< Change grid";
             fwd_button.innerText = "Restart >";
@@ -307,19 +294,6 @@ function do_state_change(direction) {
 back_button.addEventListener('click', () => do_state_change(-1));
 fwd_button.addEventListener('click', () => do_state_change(1));
 
-// list cameras
-//let camera_list = Object();
-/*
-function check_out_cameras(device, cb) {
-    if (device.kind === 'videoinput') {
-        navigator.mediaDevices.getUserMedia({video: {deviceId: {exact: device.deviceId}}}).then(
-            (stream) => {
-                camera_list[device.deviceId] = stream.getVideoTracks()[0].getCapabilities();
-                cb();
-            })
-    } else cb();
-}
-*/
 navigator.mediaDevices.enumerateDevices().then(
     (devices) => {
         devices.forEach((device, i) => {
@@ -338,17 +312,6 @@ navigator.mediaDevices.enumerateDevices().then(
             setCookie("camera_choice", e.target.value, 10);
             start_camera();
         };
-        /*
-        // go through each camera and detect its capabilities and then start program
-        let requests = devices.reduce((promiseChain, device) => {
-            return promiseChain.then(() => new Promise((resolve) => {
-                check_out_cameras(device, resolve);
-            }));
-        }, Promise.resolve());
-        */
-        //requests.then(() => {
-        //    console.log(camera_list);
-            do_state_change(0); // start the whole thing
-        //});
 
+        do_state_change(0); // start the whole thing
     });

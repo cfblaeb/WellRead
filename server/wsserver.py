@@ -51,28 +51,13 @@ def map_wells(col, row, orientation):
 		return f"{['H', 'G', 'F', 'E', 'D', 'C', 'B', 'A'][col]}{row + 1}"
 
 
-def analyze_image(image, pps):
-	wells = [{'pp': pp, 'well': image[pp['minY']:pp['maxY'], pp['minX']:pp['maxX']]} for pp in pps]
-	with Pool(8) as p:
-		rar = p.map(decode_thread, wells)
-	return rar
-
-
-def read_dem_wells(all_data: dict):
-	grid = all_data['grid']
-	iscale = all_data['scale']
-	images = all_data['images']
-	image_zero = io.imread(BytesIO(decodebytes(images[0]['src'].split(',')[1].encode())))
-
-	scale = image_zero.shape[1] / iscale
+def get_dem_wells(images, grid, scale):
 	if grid['width'] > grid['height']:
 		grid_size = (grid['width'] / 12) * scale
-		orientation = "landscape"
 		no_rows = 8
 		no_cols = 12
 	else:
 		grid_size = (grid['height'] / 12) * scale
-		orientation = "portrait"
 		no_rows = 12
 		no_cols = 8
 	width = grid_size * grid['scaleX']
@@ -96,8 +81,39 @@ def read_dem_wells(all_data: dict):
 
 			pps.append({'col': col, 'row': row, 'minY': int(min(dys)), 'maxY': int(max(dys)), 'minX': int(min(dxs)), 'maxX': int(max(dxs)), 'x0': dx1, 'y0': dy1})
 
-	results = [analyze_image(io.imread(BytesIO(decodebytes(image['src'].split(',')[1].encode()))), pps) for image in images]
+	wells_pr_img = []
+	for image in images:
+		image = io.imread(BytesIO(decodebytes(image['src'].split(',')[1].encode())))
+		wells = [{'pp': pp, 'well': image[pp['minY']:pp['maxY'], pp['minX']:pp['maxX']]} for pp in pps]
+		wells_pr_img.append(wells)
+	return wells_pr_img
 
+
+def do_it(all_data: dict):
+	images = all_data['images']
+	grid = all_data['grid']
+	iscale = all_data['scale']
+	image_zero = io.imread(BytesIO(decodebytes(images[0]['src'].split(',')[1].encode())))
+	scale = image_zero.shape[1] / iscale
+
+	all_wells = get_dem_wells(images, grid, scale)
+	results = []
+	for wells in all_wells:
+		with Pool(8) as p:
+			results.append(p.map(decode_thread, wells))
+
+	if grid['width'] > grid['height']:
+		grid_size = (grid['width'] / 12) * scale
+		orientation = "landscape"
+		no_rows = 8
+		no_cols = 12
+	else:
+		grid_size = (grid['height'] / 12) * scale
+		orientation = "portrait"
+		no_rows = 12
+		no_cols = 8
+	width = grid_size * grid['scaleX']
+	height = grid_size * grid['scaleY']
 	# analyze results
 	rar = []  # list of well objects with {'row', 'col', 'barcode', 'x0', 'y0'}
 	for well_no in range(no_rows * no_cols):
@@ -123,11 +139,8 @@ def read_dem_wells(all_data: dict):
 	# draw result consensus
 	fig, ax = plt.subplots(1, figsize=(10, 20))
 	ax.imshow(image_zero)
-	rect = patches.Rectangle((grid['left'] * scale, grid['top'] * scale), width=grid['width'] * grid['scaleX'] * scale,
-							 height=grid['height'] * grid['scaleY'] * scale, angle=grid['angle'], linewidth=1,
-							 edgecolor='r', facecolor='none')
-	ar_pa = patches.Arrow(grid['left'] * scale, grid['top'] * scale, cos(((grid['angle'] - 90) / 360) * (2 * pi)) * 50,
-						  sin(((grid['angle'] - 90) / 360) * (2 * pi)) * 50, color='green', width=10)
+	rect = patches.Rectangle((grid['left'] * scale, grid['top'] * scale), width=grid['width'] * grid['scaleX'] * scale, height=grid['height'] * grid['scaleY'] * scale, angle=grid['angle'], linewidth=1, edgecolor='r', facecolor='none')
+	ar_pa = patches.Arrow(grid['left'] * scale, grid['top'] * scale, cos(((grid['angle'] - 90) / 360) * (2 * pi)) * 50, sin(((grid['angle'] - 90) / 360) * (2 * pi)) * 50, color='green', width=10)
 	ax.add_patch(rect)
 	ax.add_patch(ar_pa)
 
@@ -156,7 +169,7 @@ async def hello(websocket, path):
 	unique_name = str(uuid4())
 	with open(unique_name + ".json", 'w') as f:
 		f.write(all_data)
-	rar, ready_to_send_fig = read_dem_wells(loads(all_data))
+	rar, ready_to_send_fig = do_it(loads(all_data))
 	print("analyzed. Returning results.")
 	await websocket.send(ready_to_send_fig)
 	await websocket.send(dumps(rar))

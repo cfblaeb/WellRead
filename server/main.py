@@ -14,17 +14,21 @@ scale = image_zero.shape[1] / iscale
 all_wells = get_dem_wells(images, grid, scale)
 
 print("--------------------")
-results = ffi.new("unsigned char [96][40]")
+
+results = ffi.new(f"unsigned char [{len(all_wells)*96}][40]")
 fimage = b''
 widths = []
 heights = []
-for well in all_wells[3]:
-	img = img_as_ubyte(color.rgba2rgb(well['well']))
-	fimage += img.tobytes()
-	widths.append(img.shape[1])
-	heights.append(img.shape[0])
-return_val = lib.do_it(results, fimage, widths, heights, len(widths))
+for image in all_wells:
+	for well in image:
+		well_img = img_as_ubyte(color.rgba2rgb(well['well']))
+		fimage += well_img.tobytes()
+		widths.append(well_img.shape[1])
+		heights.append(well_img.shape[0])
+
+
+return_val = lib.do_it(results, fimage, widths, heights)
 print("back in python")
 print(return_val)
-for i in range(96):
+for i in range(96*5):
 	print(ffi.string(results[i]).decode())

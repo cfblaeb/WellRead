@@ -4,8 +4,13 @@ from skimage import io, color, img_as_ubyte
 from io import BytesIO
 from json import load
 from base64 import decodebytes
+from time import time
+
 
 all_data = load(open("../0f37293e-dd4b-4691-bbce-5778e997c0e7.json"))
+
+istart = time()
+
 images = all_data['images']
 grid = all_data['grid']
 iscale = all_data['scale']
@@ -28,7 +33,9 @@ for image in all_wells:
 
 
 return_val = lib.do_it(results, fimage, widths, heights)
+print(time() - istart)
+
 print("back in python")
 print(return_val)
-for i in range(96*5):
-	print(ffi.string(results[i]).decode())
+#for i in range(96*5):
+#	print(ffi.string(results[i]).decode())

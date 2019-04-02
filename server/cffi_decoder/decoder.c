@@ -19,23 +19,13 @@ int decode_worker(unsigned char *output, unsigned char *pxl, unsigned int width,
     DmtxRegion     *reg;
     DmtxMessage    *msg;
 
-    int scale = 1;
     int returnval = -1;
-    img = dmtxImageCreate(pxl, width, height, DmtxPack24bppRGB);//DmtxPack24bppRGB);
-    dec = dmtxDecodeCreate(img, scale);
-    /*
-      DmtxPropEdgeMin, DmtxPropEdgeMax
-      DmtxPropScanGap
-      DmtxPropFnc1
-      DmtxPropSquareDevn (0, 90)
-      DmtxPropSymbolSize
-      DmtxPropEdgeThresh (1, 100)
-      DmtxPropXmin, DmtxPropXmax
-      DmtxPropYmin, DmtxPropYmax:
+    img = dmtxImageCreate(pxl, width, height, DmtxPack24bppRGB);
 
-      dmtxDecodeSetProp(dec, prop, value);
-    */
-    DmtxTime timeout = dmtxTimeAdd(dmtxTimeNow(), 10000);
+    // first attempt, shrink it
+    int scale = 2;
+    dec = dmtxDecodeCreate(img, scale);
+    DmtxTime timeout = dmtxTimeAdd(dmtxTimeNow(), 10);
     reg = dmtxRegionFindNext(dec, &timeout);
     if(reg != NULL) {
         msg = dmtxDecodeMatrixRegion(dec, reg, DmtxUndefined);
@@ -47,6 +37,95 @@ int decode_worker(unsigned char *output, unsigned char *pxl, unsigned int width,
         dmtxRegionDestroy(&reg);
     }
     dmtxDecodeDestroy(&dec);
+    if (returnval != 1) {
+        // second attempt, defaults
+        scale = 1;
+        dec = dmtxDecodeCreate(img, scale);
+        DmtxTime timeout = dmtxTimeAdd(dmtxTimeNow(), 10);
+        reg = dmtxRegionFindNext(dec, &timeout);
+        if(reg != NULL) {
+            msg = dmtxDecodeMatrixRegion(dec, reg, DmtxUndefined);
+            if(msg != NULL) {
+                memcpy(output, msg->output, msg->outputIdx+1);
+                dmtxMessageDestroy(&msg);
+                returnval = 1;
+            }
+            dmtxRegionDestroy(&reg);
+        }
+        dmtxDecodeDestroy(&dec);
+    }
+    if (returnval != 1) {
+        // third attempt, set threshold 100
+        scale = 1;
+        dec = dmtxDecodeCreate(img, scale);
+        dmtxDecodeSetProp(dec, DmtxPropEdgeThresh, 100);
+        DmtxTime timeout = dmtxTimeAdd(dmtxTimeNow(), 10);
+        reg = dmtxRegionFindNext(dec, &timeout);
+        if(reg != NULL) {
+            msg = dmtxDecodeMatrixRegion(dec, reg, DmtxUndefined);
+            if(msg != NULL) {
+                memcpy(output, msg->output, msg->outputIdx+1);
+                dmtxMessageDestroy(&msg);
+                returnval = 1;
+            }
+            dmtxRegionDestroy(&reg);
+        }
+        dmtxDecodeDestroy(&dec);
+    }
+    // redo the 3 first ones, but now with extra time
+    if (returnval != 1) {
+        // shrink
+        scale = 2;
+        dec = dmtxDecodeCreate(img, scale);
+        DmtxTime timeout = dmtxTimeAdd(dmtxTimeNow(), 100);
+        reg = dmtxRegionFindNext(dec, &timeout);
+        if(reg != NULL) {
+            msg = dmtxDecodeMatrixRegion(dec, reg, DmtxUndefined);
+            if(msg != NULL) {
+                memcpy(output, msg->output, msg->outputIdx+1);
+                dmtxMessageDestroy(&msg);
+                returnval = 1;
+            }
+            dmtxRegionDestroy(&reg);
+        }
+        dmtxDecodeDestroy(&dec);
+    }
+    if (returnval != 1) {
+        // defaults
+        scale = 1;
+        dec = dmtxDecodeCreate(img, scale);
+        DmtxTime timeout = dmtxTimeAdd(dmtxTimeNow(), 100);
+        reg = dmtxRegionFindNext(dec, &timeout);
+        if(reg != NULL) {
+            msg = dmtxDecodeMatrixRegion(dec, reg, DmtxUndefined);
+            if(msg != NULL) {
+                memcpy(output, msg->output, msg->outputIdx+1);
+                dmtxMessageDestroy(&msg);
+                returnval = 1;
+            }
+            dmtxRegionDestroy(&reg);
+        }
+        dmtxDecodeDestroy(&dec);
+    }
+    if (returnval != 1) {
+        // set threshold 100
+        scale = 1;
+        dec = dmtxDecodeCreate(img, scale);
+        dmtxDecodeSetProp(dec, DmtxPropEdgeThresh, 100);
+        DmtxTime timeout = dmtxTimeAdd(dmtxTimeNow(), 100);
+        reg = dmtxRegionFindNext(dec, &timeout);
+        if(reg != NULL) {
+            msg = dmtxDecodeMatrixRegion(dec, reg, DmtxUndefined);
+            if(msg != NULL) {
+                memcpy(output, msg->output, msg->outputIdx+1);
+                dmtxMessageDestroy(&msg);
+                returnval = 1;
+            }
+            dmtxRegionDestroy(&reg);
+        }
+        dmtxDecodeDestroy(&dec);
+    }
+
     dmtxImageDestroy(&img);
     return returnval;
 }

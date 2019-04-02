@@ -1,1 +1,0 @@
-int do_it(unsigned char result_vector[5*96][40], unsigned char *image_pxl, unsigned int width[5*96], unsigned int height[5*96]);

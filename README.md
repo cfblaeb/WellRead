@@ -4,7 +4,8 @@ Locate and read datamatrix 2d barcodes in 96 well format
 ## Status
 Under development  
 todo:
-    * speed up
+    * fix well asignment
+    * allow to re-take photo
    
 ## Parts:
     * NGINX

@@ -2,6 +2,7 @@ from asyncio import get_event_loop
 from websockets import serve
 from matplotlib import pyplot as plt
 from matplotlib import patches
+from numpy import array
 from skimage import io
 from pylibdmtx.pylibdmtx import decode
 from multiprocessing import Pool
@@ -15,30 +16,32 @@ from collections import Counter
 
 
 def decode_thread(pp_more):
-	if pp_more['well'].shape[0] > 0 and pp_more['well'].shape[1] > 0:
+	#work around becuase skimage no longer returns numpy array and pylibdmtx expects that
+	well = array(pp_more['well'])
+	if well.shape[0] > 0 and well.shape[1] > 0:
 		# try shrink
-		res = decode(pp_more['well'], timeout=10, shrink=2, max_count=1)
+		res = decode(well, timeout=10, shrink=2, max_count=1)
 		if res and res[0].data.decode().isnumeric():
 			return {**pp_more['pp'], 'barcode': res[0].data.decode()}
 		# try defaults
-		res = decode(pp_more['well'], timeout=10, max_count=1)
+		res = decode(well, timeout=10, max_count=1)
 		if res and res[0].data.decode().isnumeric():
 			return {**pp_more['pp'], 'barcode': res[0].data.decode()}
 		# try threshold
-		res = decode(pp_more['well'], timeout=10, threshold=100, max_count=1)
+		res = decode(well, timeout=10, threshold=100, max_count=1)
 		if res and res[0].data.decode().isnumeric():
 			return {**pp_more['pp'], 'barcode': res[0].data.decode()}
 		# give it more time
 			# try shrink
-		res = decode(pp_more['well'], timeout=100, shrink=2, max_count=1)
+		res = decode(well, timeout=100, shrink=2, max_count=1)
 		if res and res[0].data.decode().isnumeric():
 			return {**pp_more['pp'], 'barcode': res[0].data.decode()}
 		# try defaults
-		res = decode(pp_more['well'], timeout=100, max_count=1)
+		res = decode(well, timeout=100, max_count=1)
 		if res and res[0].data.decode().isnumeric():
 			return {**pp_more['pp'], 'barcode': res[0].data.decode()}
 		# try threshold
-		res = decode(pp_more['well'], timeout=100, threshold=100, max_count=1)
+		res = decode(well, timeout=100, threshold=100, max_count=1)
 		if res and res[0].data.decode().isnumeric():
 			return {**pp_more['pp'], 'barcode': res[0].data.decode()}
 	return {**pp_more['pp'], 'barcode': "failed"}

@@ -117,16 +117,14 @@ def do_it(all_data: dict):
 	# analyze results
 	rar = []  # list of well objects with {'row', 'col', 'barcode', 'x0', 'y0'}
 	for well_no in range(no_rows * no_cols):
-		# check that its the same well
-		if len(set([results[i][well_no]['col'] for i in range(len(results))])) == 1 and len(set([results[i][well_no]['row'] for i in range(len(results))])) == 1:
+		if len(set([results[i][well_no]['col'] for i in range(len(results))])) == 1 and len(set([results[i][well_no]['row'] for i in range(len(results))])) == 1:  # check that its the same well
 			barcodes = [results[i][well_no]['barcode'] for i in range(len(results)) if results[i][well_no]['barcode'] != 'failed']
 			barcodes_set = set(barcodes)
 			if len(barcodes_set) == 1:
 				rar.append({**results[0][well_no], 'barcode': barcodes_set.pop()})
 			elif len(barcodes_set) == 0:
 				rar.append({**results[0][well_no], 'barcode': 'failed'})
-			else:
-				# lets see if theres a concensus
+			else:  # multiple barcodes: lets see if theres a concensus
 				barcodes_counter = Counter(barcodes)
 				two_most_common = barcodes_counter.most_common(2)
 				if two_most_common[0][1] == two_most_common[1][1]:  # cant decide
@@ -148,7 +146,7 @@ def do_it(all_data: dict):
 		if irar['barcode'] == 'failed':
 			color = 'red'
 			lw = 3
-		elif irar['barcode'] == 'multi_barcodes':
+		elif irar['barcode'].startswith("uncertain"):
 			color = 'blue'
 			lw = 3
 		else:

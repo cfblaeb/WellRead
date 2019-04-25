@@ -148,8 +148,39 @@ function send_picture_and_wait_for_response(image) {
     ws.onmessage = (msg) => {
         if (typeof(msg.data)=="string") {
             let results = JSON.parse(msg.data);
-            window.ress = results;
-            results.forEach((result) => {
+            // check if there are old results
+            if (window.ress.length === 0) {
+                // there are no previous results
+                window.ress = results;
+            } else {
+                // there ARE previous results. Lets merge them with window.ress
+                results.forEach((result) => {
+                    // does this result have a barcode
+                    if ((result.barcode !== 'failed') && (!result.barcode.startsWith("uncertain"))) {
+                        // yes it has a barcode
+                        let does_it_exists = window.ress.findIndex((existing) => existing['loc'] == result['loc']);
+                        if (does_it_exists !== -1) {
+                            // yes it exists and it has a barcode
+                            // did the previous result have a barcode?
+                            if ((window.ress[does_it_exists].barcode !== 'failed') && (!window.ress[does_it_exists].barcode.startsWith("uncertain"))) {
+                                // yes the previous result has a barcode
+                                // is it the same barcode?
+                                if (window.ress[does_it_exists].barcode !== result.barcode) {
+                                    // no they different!!
+                                    // hmmm...lets just report it for now
+                                    console.log("different good looking barcodes! " + result['loc'] + " : " + result.barcode + ", old:" + window.ress[does_it_exists]['loc'] + " : " + window.ress[does_it_exists].barcode)
+                                }
+                                // if they were the same, just ignore
+                            } else {
+                                // no previous barcode, so just overwrite
+                                window.ress[does_it_exists] = result; // overwrite with new result
+                            }
+                        }
+
+                    }
+                })
+            }
+            window.ress.forEach((result) => {
                 let new_row = result_table.insertRow(-1);
                 let loc_cell = new_row.insertCell(0);
                 let barcode_cell = new_row.insertCell(1);
@@ -211,7 +242,6 @@ function start_ani(current) {
 }
 
 function state_forward() {
-    console.log("hello");
     do_state_change(1);
 }
 
@@ -285,7 +315,7 @@ function do_state_change(direction) {
             send_picture_and_wait_for_response();
             // set button text
             back_button.innerText = "< Change grid";
-            fwd_button.innerText = "Restart >";
+            fwd_button.innerText = "Re-take picture and update current results >";
             break;
     }
 }
@@ -314,3 +344,5 @@ navigator.mediaDevices.enumerateDevices().then(
 
         do_state_change(0); // start the whole thing
     });
+
+window.ress = []; // clear previous results on reload

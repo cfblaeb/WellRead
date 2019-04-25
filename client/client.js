@@ -180,6 +180,8 @@ function send_picture_and_wait_for_response(image) {
                     }
                 })
             }
+            // destroy any existing table
+            document.getElementById('result_table').innerHTML = '';
             window.ress.forEach((result) => {
                 let new_row = result_table.insertRow(-1);
                 let loc_cell = new_row.insertCell(0);
